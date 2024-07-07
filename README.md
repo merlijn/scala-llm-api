@@ -10,8 +10,8 @@ I recommend copy/pasting the code into your own project and modifying it to suit
 
 Look in the `examples` directory for example usages. There are 2:
 
-1. A simple request response chat.
-2. A basic Telegram bot.
+1. [A simple request response chat](examples/simple-chat/src/main/scala/com/github/merlijn/llm/examples/chat/Main.scala)
+2. [A basic Telegram bot](examples/telegram-bot/src/main/scala/com/github/merlijn/llm/examples/telegram_bot/Main.scala)
 
 
 

@@ -3,13 +3,13 @@ package com.github.merlijn.llm.api
 import cats.Monad
 import sttp.client3.{SttpBackend, UriContext, basicRequest}
 import sttp.model.Uri
-import CirceCodecs._
+import com.github.merlijn.llm.api.dto.CirceCodecs._
 import io.circe.syntax._
 import io.circe.parser.decode
 
-class OpenAiClient[F[_] : Monad, P](
-     apiToken: String,
-     val backend: SttpBackend[F, P],
+class OpenAiClient[F[_] : Monad](
+     apiToken: Option[String],
+     val backend: SttpBackend[F, _],
      val baseUri: Uri = uri"https://api.openai.com/v1") {
 
   private val logger = org.slf4j.LoggerFactory.getLogger(getClass)
@@ -22,9 +22,11 @@ class OpenAiClient[F[_] : Monad, P](
 
     logger.debug(s"POST $completionUrl - $jsonBody")
 
+    val headers: Seq[(String, String)] =
+      Seq("Content-Type" -> "application/json") ++ apiToken.map(token => "Authorization" -> s"Bearer $token")
+
     val request = basicRequest.post(completionUrl)
-      .header("Authorization", s"Bearer $apiToken")
-      .header("Content-Type", "application/json")
+      .headers(Map(headers: _*))
       .body(jsonBody)
 
     def parseResponse(response: String): Either[ErrorResponse, ChatCompletionResponse] = {

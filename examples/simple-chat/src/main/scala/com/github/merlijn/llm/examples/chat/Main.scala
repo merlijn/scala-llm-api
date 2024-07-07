@@ -8,7 +8,7 @@ object Main extends App {
 
   val logger = org.slf4j.LoggerFactory.getLogger(getClass)
 
-  val llmToken = sys.env.getOrElse("LLM_TOKEN", throw new IllegalStateException("API_TOKEN env variable not set"))
+  val llmToken = sys.env.get("LLM_TOKEN")
   val llmBaseUrl = sys.env.getOrElse("LLM_BASE_URL", "https://api.openai.com/v1")
   val llmModel = sys.env.getOrElse("LLM_MODEL", "gpt-3.5-turbo")
 
@@ -27,7 +27,7 @@ object Main extends App {
   )
 
   openAiClient.chatCompletion(chatRequest) match {
-    case Right(response) => logger.info(response.choices.head.message.content)
+    case Right(response) => response.firstMessageContent.foreach(logger.info)
     case Left(error)     => logger.error(error.message)
   }
 }

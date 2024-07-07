@@ -23,7 +23,7 @@ lazy val telegramBot = project
   .in(file("examples/telegram-bot"))
   .settings(commonSettings)
   .settings(
-    name := "telegram-bot",
+    name := "example-telegram-bot",
     version := "0.1.0-SNAPSHOT",
     libraryDependencies ++= Seq(
       "com.bot4s" %% "telegram-core" % "5.8.2" cross CrossVersion.for3Use2_13,
@@ -36,7 +36,19 @@ lazy val simpleChat = project
   .in(file("examples/simple-chat"))
   .settings(commonSettings)
   .settings(
-    name := "simple-chat",
+    name := "example-simple-chat",
+    version := "0.1.0-SNAPSHOT",
+    libraryDependencies ++= Seq(
+      "ch.qos.logback" % "logback-classic" % "1.5.6",
+      "com.softwaremill.sttp.client3" %% "async-http-client-backend-future" % "3.9.7" cross CrossVersion.for3Use2_13,
+    )
+  ).dependsOn(api)
+
+lazy val functionCall = project
+  .in(file("examples/function-call"))
+  .settings(commonSettings)
+  .settings(
+    name := "example-function-call",
     version := "0.1.0-SNAPSHOT",
     libraryDependencies ++= Seq(
       "ch.qos.logback" % "logback-classic" % "1.5.6",

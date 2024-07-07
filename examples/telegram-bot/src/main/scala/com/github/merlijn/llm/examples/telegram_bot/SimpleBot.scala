@@ -13,7 +13,7 @@ import com.bot4s.telegram.models._
 import scala.concurrent.Future
 
 class SimpleBot(telegramToken: String,
-                llmClient: OpenAiClient[Future, Any],
+                llmClient: OpenAiClient[Future],
                 llmModel: String) extends TelegramBot with Polling {
 
   override val client: RequestHandler[Future] = new FutureSttpClient(telegramToken)(llmClient.backend, scala.concurrent.ExecutionContext.global)
@@ -31,7 +31,12 @@ class SimpleBot(telegramToken: String,
       )).flatMap { completion => completion match {
           case Right(response) =>
             logger.debug(s"Received response from LLM: ${response.choices.head.message.content}")
-            request(SendMessage(msg.source, response.choices.head.message.content, parseMode = Some(ParseMode.Markdown))).void
+
+            response.firstMessageContent match {
+              case None          => request(SendMessage(msg.source, "Failed to get response from LLM.")).void
+              case Some(content) => request(SendMessage(msg.source, content, parseMode = Some(ParseMode.Markdown))).void
+            }
+
           case Left(error) =>
             logger.error(s"Failed to get response from LLM: ${error.message}")
             request(SendMessage(msg.source, "An error occurred while processing your request. Please try again later.")).void

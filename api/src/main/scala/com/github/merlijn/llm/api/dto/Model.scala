@@ -4,11 +4,11 @@ import io.circe.JsonObject
 import json.Schema
 import json.schema.Version.Draft12
 
-case class Message(role: String, content: String)
+case class Message(role: String, content: Option[String], tool_calls: Option[List[ToolCall]] = None)
 
 case object Message {
-  def user(content: String): Message = Message("user", content)
-  def system(content: String): Message = Message("system", content)
+  def user(content: String): Message = Message("user", Some(content))
+  def system(content: String): Message = Message("system", Some(content))
 }
 
 case class ChatCompletionRequest(
@@ -47,6 +47,8 @@ case class Function(
   parameters: JsonObject
 )
 
+// --- Response
+
 case class ChatCompletionResponse(
    id: String,
    `object`: String,
@@ -55,18 +57,32 @@ case class ChatCompletionResponse(
    choices: List[Choice],
    usage: Usage,
    system_fingerprint: Option[String]
-)
+) {
+  def firstMessageContent: Option[String] = choices.headOption.flatMap(_.message.content)
+  def firstToolCall: Option[ToolCall] = choices.headOption.flatMap(_.message.tool_calls.flatMap(_.headOption))
+}
 
 case class Choice(
    index: Int,
    message: Message,
-   finish_reason: String
+   finish_reason: Option[String] // None in case of streaming
 )
 
 case class Usage(
   prompt_tokens: Int,
   completion_tokens: Int,
   total_tokens: Int
+)
+
+case class ToolCall(
+  id: String,
+  `type`: String,
+  function: FunctionCall
+)
+
+case class FunctionCall(
+  name: String,
+  arguments: String
 )
 
 sealed trait ErrorResponse {
