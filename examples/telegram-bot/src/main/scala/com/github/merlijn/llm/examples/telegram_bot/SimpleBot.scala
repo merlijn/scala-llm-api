@@ -2,13 +2,13 @@ package com.github.merlijn.llm.examples.telegram_bot
 
 import cats.instances.future._
 import cats.syntax.functor._
-import com.github.merlijn.llm.api
-import com.github.merlijn.llm.api.{ChatCompletionRequest, OpenAiClient}
 import com.bot4s.telegram.api.RequestHandler
 import com.bot4s.telegram.clients.FutureSttpClient
 import com.bot4s.telegram.future.{Polling, TelegramBot}
 import com.bot4s.telegram.methods._
 import com.bot4s.telegram.models._
+import com.github.merlijn.llm.api.{OpenAiClient, dto}
+import com.github.merlijn.llm.api.dto.ChatCompletionRequest
 
 import scala.concurrent.Future
 
@@ -22,8 +22,8 @@ class SimpleBot(telegramToken: String,
     msg.text.fold(Future.successful(())) { text =>
       llmClient.chatCompletion(ChatCompletionRequest(
         messages = List(
-          api.Message.system("answer shortly"),
-          api.Message.user(text)
+          dto.Message.system("answer shortly"),
+          dto.Message.user(text)
         ),
         model = llmModel,
         max_tokens = Some(1500),

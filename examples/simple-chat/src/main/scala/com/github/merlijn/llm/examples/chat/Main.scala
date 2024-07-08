@@ -1,6 +1,7 @@
 package com.github.merlijn.llm.examples.chat
 
 import com.github.merlijn.llm.api._
+import com.github.merlijn.llm.api.dto.{ChatCompletionRequest, Message}
 import sttp.client3.HttpClientSyncBackend
 import sttp.model.Uri
 

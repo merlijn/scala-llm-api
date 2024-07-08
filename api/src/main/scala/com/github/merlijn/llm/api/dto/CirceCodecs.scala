@@ -1,7 +1,5 @@
 package com.github.merlijn.llm.api.dto
 
-import com.github.merlijn.llm.api.{ChatCompletionRequest, ChatCompletionResponse, Choice, Function, FunctionCall, Message, Tool, ToolCall, Usage}
-
 object CirceCodecs {
   import io.circe._
   import io.circe.generic.semiauto._

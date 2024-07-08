@@ -1,14 +1,18 @@
-package com.github.merlijn.llm.api
+package com.github.merlijn.llm.api.dto
 
+import com.github.merlijn.llm.api.camelToSnake
 import io.circe.JsonObject
 import json.Schema
 import json.schema.Version.Draft12
 
-case class Message(role: String, content: Option[String], tool_calls: Option[List[ToolCall]] = None)
+import scala.reflect.ClassTag
+
+case class Message(role: String, content: Option[String], tool_call_id: Option[String] = None, tool_calls: Option[List[ToolCall]] = None)
 
 case object Message {
   def user(content: String): Message = Message("user", Some(content))
   def system(content: String): Message = Message("system", Some(content))
+  def tool(toolCallId: String, content: String): Message = Message("tool", Some(content), tool_call_id = Some(toolCallId))
 }
 
 case class ChatCompletionRequest(
@@ -27,9 +31,11 @@ case class Tool(
 )
 
 object Tool {
-  def function[T](name: String, description: String)(implicit schema: Schema[T]): Tool = {
+  def function[T : ClassTag](description: String)(implicit schema: Schema[T]): Tool = {
     import com.github.andyglow.jsonschema.AsCirce._
     import com.github.andyglow.jsonschema.AsValueBuilder._
+
+    val name = camelToSnake(implicitly[ClassTag[T]].runtimeClass.getSimpleName)
 
     val json =
       schema.asCirce(Draft12("Test"))
@@ -59,7 +65,6 @@ case class ChatCompletionResponse(
    system_fingerprint: Option[String]
 ) {
   def firstMessageContent: Option[String] = choices.headOption.flatMap(_.message.content)
-  def firstToolCall: Option[ToolCall] = choices.headOption.flatMap(_.message.tool_calls.flatMap(_.headOption))
 }
 
 case class Choice(
@@ -89,6 +94,9 @@ sealed trait ErrorResponse {
   def message: String
 }
 
+case class ToolNotFound(toolName: String) extends ErrorResponse {
+  override def message: String = s"Tool with name $toolName not found"
+}
 case class UnexpectedError(message: String) extends ErrorResponse
 case class JsonParsingError(reason: io.circe.Error) extends ErrorResponse {
   override def message: String = reason.getMessage
