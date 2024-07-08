@@ -15,9 +15,9 @@ These could be replaced with other libraries relatively easily.
 
 Look in the `examples` directory for example usages. There are 2:
 
-1. [A simple request response chat](examples/simple-chat/src/main/scala/com/github/merlijn/llm/examples/chat/Main.scala)
-2. [A basic Telegram bot](examples/telegram-bot/src/main/scala/com/github/merlijn/llm/examples/telegram_bot/Main.scala)
-3. [Function calling](examples/function-call/src/main/scala/com/github/merlijn/llm/examples/function_call/Main.scala)
+1. [A simple request response chat](examples/simple-chat/src/main/scala/com/github/merlijn/llm/examples/chat/ExampleSimpleChatResponse.scala)
+2. [A basic Telegram bot](examples/telegram-bot/src/main/scala/com/github/merlijn/llm/examples/telegram_bot/ExampleTelegramBot.scala)
+3. [Function calling](examples/function-call/src/main/scala/com/github/merlijn/llm/examples/function_call/ExampleFunctionCall.scala)
 
 
 

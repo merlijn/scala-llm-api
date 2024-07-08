@@ -5,7 +5,7 @@ import com.github.merlijn.llm.api.dto.{ChatCompletionRequest, Message}
 import sttp.client3.HttpClientSyncBackend
 import sttp.model.Uri
 
-object Main extends App {
+object ExampleSimpleChatResponse extends App {
 
   val logger = org.slf4j.LoggerFactory.getLogger(getClass)
 

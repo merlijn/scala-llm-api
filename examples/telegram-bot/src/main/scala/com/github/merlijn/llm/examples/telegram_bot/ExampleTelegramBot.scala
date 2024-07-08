@@ -8,7 +8,7 @@ import sttp.model.Uri
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext}
 
-object Main extends App {
+object ExampleTelegramBot extends App {
 
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.global
 
