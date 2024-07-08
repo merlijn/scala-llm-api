@@ -33,25 +33,24 @@ object Main extends App {
     baseUri = Uri.parse(llmBaseUrl).getOrElse(throw new IllegalStateException("Invalid base URL"))
   )
 
+  val getPackageById     = Tool.function[GetPackageById]("Get the status of a package by it's ID")
+  val getPackageByIdImpl = ToolImplementation.fromFunction[Future, GetPackageById](getPackageById =>
+    Future {
+      Thread.sleep(1000)
+      s"The package with id ${getPackageById.package_id} is currently in transit, estimated delivery is tomorrow."
+    }
+  )
+
   val request = ChatCompletionRequest(
     model = llmModel,
     messages = List(
       Message.system("You are an assistant chat bot that helps customers with their questions about their packages"),
       Message.user("Do you know what the status of my package is? The id is 237293GR"),
     ),
-    tools = Some(List(Tool.function[GetPackageById]("Get the status of a package by it's ID"))),
+    tools = Some(List(getPackageById)),
   )
 
-  val toolImplementations = Seq(
-    ToolImplementation.fromFunction[Future, GetPackageById](getPackageById =>
-      Future {
-        Thread.sleep(1000)
-        "The package is currently in transit, estimated delivery is tomorrow."
-      }
-    )
-  )
-
-  val response = Await.result(openAiClient.chatCompletion(request, toolImplementations), 5.seconds)
+  val response = Await.result(openAiClient.chatCompletion(request, Seq(getPackageByIdImpl)), 5.seconds)
 
   response match {
     case Right(response) => println(response.firstMessageContent)
