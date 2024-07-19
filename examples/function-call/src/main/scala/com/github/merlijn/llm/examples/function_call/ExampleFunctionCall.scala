@@ -2,7 +2,7 @@ package com.github.merlijn.llm.examples.function_call
 
 import com.github.merlijn.llm.api.dto._
 import com.github.merlijn.llm.api.{OpenAiClient, ToolImplementation}
-import io.circe.{Decoder, Json}
+import io.circe.Decoder
 import io.circe.generic.semiauto.deriveDecoder
 import sttp.client3.HttpClientFutureBackend
 import sttp.model.Uri
@@ -17,7 +17,7 @@ object GetPackageById {
   implicit val decoder: Decoder[GetPackageById] = deriveDecoder[GetPackageById]
 }
 
-object Main extends App {
+object ExampleFunctionCall extends App {
 
   import cats.instances.future._
 

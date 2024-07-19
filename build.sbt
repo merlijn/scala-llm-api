@@ -13,8 +13,8 @@ lazy val api = project
     libraryDependencies ++= Seq(
       "org.slf4j" % "slf4j-api" % "2.0.12",
       "com.softwaremill.sttp.client3" %% "core" % "3.9.7",
-      "com.github.andyglow" %% "scala-jsonschema-core" % "0.7.11",
-      "com.github.andyglow" %% "scala-jsonschema-circe-json" % "0.7.11",
+      "com.github.andyglow" %% "scala-jsonschema-core" % "0.7.11" cross CrossVersion.for3Use2_13,
+      "com.github.andyglow" %% "scala-jsonschema-circe-json" % "0.7.11" cross CrossVersion.for3Use2_13,
       "org.typelevel" %% "cats-core" % "2.12.0",
     )
   )

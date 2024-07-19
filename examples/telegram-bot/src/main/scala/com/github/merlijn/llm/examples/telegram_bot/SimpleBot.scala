@@ -8,7 +8,6 @@ import com.bot4s.telegram.future.{Polling, TelegramBot}
 import com.bot4s.telegram.methods._
 import com.bot4s.telegram.models._
 import com.github.merlijn.llm.api.{OpenAiClient, dto}
-import com.github.merlijn.llm.api.dto.ChatCompletionRequest
 
 import scala.concurrent.Future
 
@@ -20,15 +19,18 @@ class SimpleBot(telegramToken: String,
 
   override def receiveMessage(msg: Message): Future[Unit] =
     msg.text.fold(Future.successful(())) { text =>
-      llmClient.chatCompletion(ChatCompletionRequest(
-        messages = List(
-          dto.Message.system("answer shortly"),
-          dto.Message.user(text)
-        ),
+
+      val chatRequest = dto.ChatCompletionRequest(
         model = llmModel,
+        messages = List(
+          dto.Message.system("Answer shortly"),
+          dto.Message.user(text),
+        ),
         max_tokens = Some(1500),
         temperature = Some(0.8),
-      )).flatMap { completion => completion match {
+      )
+
+      llmClient.chatCompletion(chatRequest).flatMap {
           case Right(response) =>
             logger.debug(s"Received response from LLM: ${response.choices.head.message.content}")
 
@@ -40,7 +42,6 @@ class SimpleBot(telegramToken: String,
           case Left(error) =>
             logger.error(s"Failed to get response from LLM: ${error.message}")
             request(SendMessage(msg.source, "An error occurred while processing your request. Please try again later.")).void
-        }
       }.recover {
         case ex: Exception =>
           logger.error(s"Failed to send message to LLM or to send response to user: ${ex.getMessage}")
