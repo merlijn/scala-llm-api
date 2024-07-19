@@ -2,7 +2,7 @@ package com.github.merlijn.llm.api
 
 import cats.{Monad, Traverse}
 import cats.data.EitherT
-import com.github.merlijn.llm.api.dto.CirceCodecs._
+import com.github.merlijn.llm.api.dto.CirceCodecs.given
 import com.github.merlijn.llm.api.dto._
 import io.circe.parser.decode
 import io.circe.syntax._
@@ -11,7 +11,7 @@ import sttp.model.Uri
 
 class OpenAiClient[F[_] : Monad](
      apiToken: Option[String],
-     val backend: SttpBackend[F, _],
+     val backend: SttpBackend[F, ?],
      val baseUri: Uri = uri"https://api.openai.com/v1") {
 
   private val logger = org.slf4j.LoggerFactory.getLogger(getClass)
@@ -27,7 +27,7 @@ class OpenAiClient[F[_] : Monad](
     Monad[F].map(request.send(backend)) { _.body.left.map(e => UnexpectedError(e)) }
   }
 
-  private def performToolCalls(chatRequest: ChatCompletionRequest, response: ChatCompletionResponse, toolImplementations: Seq[ToolImplementation[F, _]]): EitherT[F, ErrorResponse, ChatCompletionResponse] = {
+  private def performToolCalls(chatRequest: ChatCompletionRequest, response: ChatCompletionResponse, toolImplementations: Seq[ToolImplementation[F, ?]]): EitherT[F, ErrorResponse, ChatCompletionResponse] = {
 
     def performToolCall(toolCall: ToolCall): EitherT[F, ErrorResponse, Message] = {
       for {
@@ -48,7 +48,7 @@ class OpenAiClient[F[_] : Monad](
     }
   }
 
-  def chatCompletion(chatRequest: ChatCompletionRequest, toolImplementations: Seq[ToolImplementation[F, _]] = Nil): F[Either[ErrorResponse, ChatCompletionResponse]] = {
+  def chatCompletion(chatRequest: ChatCompletionRequest, toolImplementations: Seq[ToolImplementation[F, ?]] = Nil): F[Either[ErrorResponse, ChatCompletionResponse]] = {
 
     val completionUrl = baseUri.addPath("chat", "completions")
     val jsonBody = jsonPrinter.print(chatRequest.asJson)
@@ -60,7 +60,7 @@ class OpenAiClient[F[_] : Monad](
 
     val request = basicRequest
       .post(completionUrl)
-      .headers(Map(headers: _*))
+      .headers(Map(headers*))
       .body(jsonBody)
 
     (for {
