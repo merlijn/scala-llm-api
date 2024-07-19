@@ -1,28 +1,43 @@
 package com.github.merlijn.llm.api.schema
 
+import io.circe.Derivation
 import io.circe.Derivation.summonLabelsRec
-import io.circe.{Derivation, JsonObject}
 
-import scala.compiletime.{constValue, erasedValue, summonFrom, summonInline}
+import scala.compiletime.*
 import scala.deriving.Mirror
 import scala.runtime.stdLibPatches.Predef.summon
 
 case class DerivedSchema[T](
   name: String,
   fields: Array[String],
-  children: Array[DerivedSchema[?]]
-)
+  children: Array[DerivedSchema[?]],
+  descriptions: Vector[(String, Meta)]
+) {
+  override def toString = {
+    s"""
+      |DerivedSchema(
+      |   name = $name,
+      |   fields = ${fields.mkString("[", ", ", "]")},
+      |   children = ${children.mkString("[", ", ", "]")},
+      |   meta = ${descriptions.map((k, v) => s"($k -> ${v.name}, ${v.description})").mkString("[", ", ", "]")}
+      |
+      |""".stripMargin
+  }
+}
 
 object DerivedSchema {
 
-  given DerivedSchema[String] = new DerivedSchema[String]("string", Array.empty, Array.empty)
-  given DerivedSchema[Int] = new DerivedSchema[Int]("string", Array.empty, Array.empty)
+  // predefined schemas
+  given DerivedSchema[String] = new DerivedSchema[String]("string", Array.empty, Array.empty, Vector.empty)
+  given DerivedSchema[Int] = new DerivedSchema[Int]("string", Array.empty, Array.empty, Vector.empty)
+  given DerivedSchema[Boolean] = new DerivedSchema[Boolean]("boolean", Array.empty, Array.empty, Vector.empty)
 
   inline final given derived[A](using A: Mirror.Of[A]): DerivedSchema[A] = {
     new DerivedSchema[A](
       constValue[A.MirroredLabel],
       Derivation.summonLabels[A.MirroredElemLabels],
-      summonDescriptors[A.MirroredElemTypes]
+      summonDescriptors[A.MirroredElemTypes],
+      Meta.fieldMetaForType[A]
     )
   }
 
@@ -40,7 +55,9 @@ object DerivedSchema {
     }
 }
 
-case class Person(name: String, age: Int)
+case class Person(
+   @Meta(name = "Name", description = "The name of the person") name: String,
+   age: Int)
 
 
 object Test extends App {

@@ -11,33 +11,33 @@ sealed trait ConcreteSchemaType {
 }
 
 case class RootSchema(
-                       `$schema`: String,
-                       `$id`: String,
-                       defs: Map[String, ConcreteSchemaType] = Map.empty,
-                     )
+ `$schema`: String,
+ `$id`: String,
+ defs: Map[String, ConcreteSchemaType] = Map.empty,
+)
 
 case class Reference(
-                      ref: String
-                    )
+  ref: String
+)
 
 case class JsonEnumType(
-                         options: List[String],
-                       )
+ options: List[String],
+)
 
 case class JsonObjectType(
-                           name: Option[String],
-                           description: Option[String],
-                           parameters: Map[String, ConcreteSchemaType | Reference],
-                           required: List[String] = List.empty
-                         ) extends ConcreteSchemaType {
+  name: Option[String],
+  description: Option[String],
+  parameters: Map[String, ConcreteSchemaType | Reference],
+  required: List[String] = List.empty
+) extends ConcreteSchemaType {
   def `type` : JsonType = "object"
 }
 
 case class JsonArrayType(
-                          name: Option[String],
-                          description: Option[String],
-                          items: ConcreteSchemaType | Reference
-                        ) extends ConcreteSchemaType {
+  name: Option[String],
+  description: Option[String],
+  items: ConcreteSchemaType | Reference
+) extends ConcreteSchemaType {
   def `type` : JsonType = "array"
 }
 
