@@ -1,6 +1,7 @@
 package com.github.merlijn.llm.api.dto
 
 import com.github.merlijn.llm.api.camelToSnake
+import com.github.merlijn.llm.api.schema.JsonSchema
 import io.circe.JsonObject
 
 import scala.reflect.ClassTag
@@ -27,10 +28,6 @@ case class Tool(
   `type`: String = "function",
   function: Function
 )
-
-trait JsonSchema[T] {
-  def asJson: JsonObject
-}
 
 object Tool {
   def function[T : ClassTag](description: String)(using schema: JsonSchema[T]): Tool = {

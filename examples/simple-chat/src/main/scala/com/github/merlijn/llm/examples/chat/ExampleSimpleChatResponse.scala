@@ -9,9 +9,9 @@ object ExampleSimpleChatResponse extends App {
 
   val logger = org.slf4j.LoggerFactory.getLogger(getClass)
 
-  val llmToken = sys.env.get("LLM_TOKEN")
-  val llmBaseUrl = sys.env.getOrElse("LLM_BASE_URL", "https://api.openai.com/v1")
-  val llmModel = sys.env.getOrElse("LLM_MODEL", "gpt-3.5-turbo")
+  val llmToken: Option[String] = sys.env.get("LLM_TOKEN")
+  val llmBaseUrl: String = sys.env.getOrElse("LLM_BASE_URL", "https://api.openai.com/v1")
+  val llmModel: String = sys.env.getOrElse("LLM_MODEL", "gpt-3.5-turbo")
 
   val openAiClient = new OpenAiClient(
     apiToken = llmToken,
