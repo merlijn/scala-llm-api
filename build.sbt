@@ -54,15 +54,15 @@ lazy val simpleChat = project
     )
   ).dependsOn(api)
 
-//lazy val functionCall = project
-//  .in(file("examples/function-call"))
-//  .settings(commonSettings)
-//  .settings(
-//    name := "example-function-call",
-//    scalaVersion := scala_3_version,
-//    version := "0.1.0-SNAPSHOT",
-//    libraryDependencies ++= Seq(
-//      "ch.qos.logback" % "logback-classic" % "1.5.6",
-//      "com.softwaremill.sttp.client3" %% "async-http-client-backend-future" % "3.9.7",
-//    )
-//  ).dependsOn(api)
+lazy val functionCall = project
+  .in(file("examples/function-call"))
+  .settings(commonSettings)
+  .settings(
+    name := "example-function-call",
+    scalaVersion := scala_3_version,
+    version := "0.1.0-SNAPSHOT",
+    libraryDependencies ++= Seq(
+      "ch.qos.logback" % "logback-classic" % "1.5.6",
+      "com.softwaremill.sttp.client3" %% "async-http-client-backend-future" % "3.9.7",
+    )
+  ).dependsOn(api)

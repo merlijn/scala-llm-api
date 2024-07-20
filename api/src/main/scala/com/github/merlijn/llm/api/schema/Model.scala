@@ -11,7 +11,7 @@ case class ConcreteSchemaType(
   `type` : JsonType,
   title: Option[String] = None,
   description: Option[String] = None,
-  parameters: Option[Map[String, SchemaType]] = None,
+  properties: Option[Map[String, SchemaType]] = None,
   required: Option[List[String]] = None,
   items: Option[SchemaType] = None,
   defs: Option[Map[String, SchemaType]] = None
@@ -36,16 +36,16 @@ object SchemaType {
   }
 
   given referenceCodec: Codec.AsObject[ReferenceType] = deriveCodec[ReferenceType]
-
-  implicit def concreteSchemaTypeDecoder(implicit decoder: Decoder[SchemaType]): Decoder[ConcreteSchemaType] = new Decoder[ConcreteSchemaType] {
-    final def apply(c: HCursor): Decoder.Result[ConcreteSchemaType] =
-      for {
-        `type` <- c.downField("type").as[JsonType]
-        title  <- c.downField("title").as[Option[String]]
-      } yield {
-        ConcreteSchemaType(`type`, title)
-      }
-  }
+//
+//  implicit def concreteSchemaTypeDecoder(implicit decoder: Decoder[SchemaType]): Decoder[ConcreteSchemaType] = new Decoder[ConcreteSchemaType] {
+//    final def apply(c: HCursor): Decoder.Result[ConcreteSchemaType] =
+//      for {
+//        `type` <- c.downField("type").as[JsonType]
+//        title  <- c.downField("title").as[Option[String]]
+//      } yield {
+//        ConcreteSchemaType(`type`, title)
+//      }
+//  }
 
   implicit class JsonObjectOps(val base: JsonObject) extends AnyVal {
     def addMaybe[T : Encoder](fieldName: String, value: Option[T]): JsonObject =
@@ -62,8 +62,10 @@ object SchemaType {
       base
         .addMaybe("title", a.title)
         .addMaybe("description", a.description)
-        .addMaybe("parameters", a.parameters).toJson
+        .addMaybe("properties", a.properties).toJson
     }
+
+  implicit val schemaTypeDecoder: Decoder[SchemaType] = Decoder.decodeString.emap[SchemaType](str => Right(ReferenceType(str)))
 
   implicit val concreteEncoder: Encoder[SchemaType] = {
       Encoder.recursive { implicit recurse =>

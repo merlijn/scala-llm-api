@@ -32,7 +32,7 @@ object JsonSchemaTag {
     val childMeta = Description.fieldMetaForType[A].toMap
     val meta = Description.readMetaForType[A]
 
-    val parameters: Map[String, SchemaType] =
+    val properties: Map[String, SchemaType] =
       childLabels.zip(childSchemas).map {
         case (a, c: ConcreteSchemaType) => (a, c.copy(description = childMeta.get(a).map(_.description)))
         case (a, b) => (a, b)
@@ -41,7 +41,7 @@ object JsonSchemaTag {
     JsonSchemaTag(ConcreteSchemaType(
       `type` = "object",
       description = meta.map(_.description),
-      parameters = Some(parameters)
+      properties = Some(properties)
     ))
   }
 

@@ -1,7 +1,7 @@
 package com.github.merlijn.llm.api.dto
 
 import com.github.merlijn.llm.api.camelToSnake
-import com.github.merlijn.llm.api.schema.JsonSchemaTag
+import com.github.merlijn.llm.api.schema.{JsonSchemaTag, SchemaType}
 import io.circe.JsonObject
 
 import scala.reflect.ClassTag
@@ -39,14 +39,14 @@ object Tool {
         .remove("$schema")
         .remove("$id")
 
-    Tool(function = Function(name, description, json))
+    Tool(function = Function(name, description, summon[JsonSchemaTag[T]].schemaType))
   }
 }
 
 case class Function(
   name: String,
   description: String,
-  parameters: JsonObject
+  parameters: SchemaType
 )
 
 // --- Response
