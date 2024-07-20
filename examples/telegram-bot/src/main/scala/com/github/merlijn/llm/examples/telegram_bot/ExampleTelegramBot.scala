@@ -19,9 +19,9 @@ object ExampleTelegramBot:
 
     val logger = org.slf4j.LoggerFactory.getLogger(getClass)
 
-    val llmToken = sys.env.get("LLM_TOKEN")
-    val llmBaseUrl = sys.env.getOrElse("LLM_BASE_URL", "https://api.openai.com/v1")
-    val llmModel = sys.env.getOrElse("LLM_MODEL", "gpt-3.5-turbo")
+    val llmToken      = sys.env.get("LLM_TOKEN")
+    val llmBaseUrl    = sys.env.getOrElse("LLM_BASE_URL", "https://api.openai.com/v1")
+    val llmModel      = sys.env.getOrElse("LLM_MODEL", "gpt-3.5-turbo")
     val telegramToken = sys.env.getOrElse("TELEGRAM_TOKEN", throw new IllegalStateException("TELEGRAM_TOKEN env variable not set"))
 
     val botResource = for {
@@ -32,20 +32,19 @@ object ExampleTelegramBot:
         baseUri = Uri.parse(llmBaseUrl).getOrElse(throw new IllegalStateException("Invalid base URL"))
       )
       telegramBackend <- BlazeClientBuilder[IO].resource
-    } yield
-      val api: Api[IO] = BotApi(telegramBackend, baseUrl = s"https://api.telegram.org/bot$telegramToken")
-      new TelegramLLMBot(api, openAiClient, llmModel)
+      api = BotApi(telegramBackend, baseUrl = s"https://api.telegram.org/bot$telegramToken")
+    } yield new TelegramLLMBot(api, openAiClient, llmModel)
 
-    botResource.use { bot =>
-      bot.start()
-    }.unsafeRunSync()
+    botResource
+      .use { bot =>
+        bot.start()
+      }
+      .unsafeRunSync()
 
-class TelegramLLMBot[F[_]: Async: Parallel : Monad](
-    api: Api[F],
-    llmClient: OpenAiClient[F],
-    llmModel: String) extends LongPollBot[F](api):
+class TelegramLLMBot[F[_]: Async: Parallel: Monad](api: Api[F], llmClient: OpenAiClient[F], llmModel: String) extends LongPollBot[F](api):
 
-  val logger = org.slf4j.LoggerFactory.getLogger(getClass)
+  private val logger       = org.slf4j.LoggerFactory.getLogger(getClass)
+  private val errorMessage = "An error occurred while processing your request. Please try again later."
 
   override def onMessage(msg: Message): F[Unit] =
 
@@ -53,23 +52,24 @@ class TelegramLLMBot[F[_]: Async: Parallel : Monad](
       model = llmModel,
       messages = List(
         dto.Message.system("Answer shortly"),
-        dto.Message.user(msg.text.getOrElse("")),
+        dto.Message.user(msg.text.getOrElse(""))
       ),
       max_tokens = Some(1500),
-      temperature = Some(0.8),
+      temperature = Some(0.8)
     )
 
-    Monad[F].flatMap(llmClient.chatCompletion(chatRequest)) {
-      case Right(response) =>
-        response.firstMessageContent match
-          case None =>
-            api.execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = "Failed to get response from LLM.")).void
-          case Some(content) =>
-            api.execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = content)).void
-      case Left(error) =>
-        logger.error(s"Failed to send message to LLM or to send response to user: ${error}")
-        api.execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = "An error occurred while processing your request. Please try again later.")).void
-    }.recover:
-      case ex: Exception =>
-        logger.error(s"Failed to send message to LLM or to send response to user: ${ex.getMessage}")
-        api.execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = "An error occurred while processing your request. Please try again later.")).void
+    Monad[F]
+      .flatMap(llmClient.chatCompletion(chatRequest)):
+        case Right(response) =>
+          response.firstMessageContent match
+            case None =>
+              api.execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = errorMessage)).void
+            case Some(content) =>
+              api.execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = content)).void
+        case Left(error) =>
+          logger.error(s"Failed to send message to LLM or to send response to user: ${error}")
+          api.execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = errorMessage)).void
+      .recover:
+        case ex: Exception =>
+          logger.error(s"Failed to send message to LLM or to send response to user: ${ex.getMessage}", ex)
+          api.execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = errorMessage)).void

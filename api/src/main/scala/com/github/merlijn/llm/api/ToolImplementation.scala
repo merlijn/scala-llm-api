@@ -6,7 +6,7 @@ import io.circe.Decoder
 
 import scala.reflect.ClassTag
 
-class ToolImplementation[F[_] : Monad, T : Decoder](val name: String, val function: T => F[String]):
+class ToolImplementation[F[_]: Monad, T: Decoder](val name: String, val function: T => F[String]):
   val logger = org.slf4j.LoggerFactory.getLogger(getClass)
   def apply(value: String): F[Either[ErrorResponse, String]] =
     io.circe.parser.decode[T](value) match
@@ -15,7 +15,7 @@ class ToolImplementation[F[_] : Monad, T : Decoder](val name: String, val functi
 
 object ToolImplementation:
 
-  def fromFunction[F[_] : Monad, T : Decoder : ClassTag](function: T => F[String]): ToolImplementation[F, T] =
+  def fromFunction[F[_]: Monad, T: Decoder: ClassTag](function: T => F[String]): ToolImplementation[F, T] =
 
     val functionName = camelToSnake(summon[ClassTag[T]].runtimeClass.getSimpleName)
     new ToolImplementation[F, T](functionName, function)

@@ -24,7 +24,7 @@ object Description:
       .collect:
         case sym if sym.hasAnnotation(annot) =>
           val fieldNameExpr = Expr(sym.name.asInstanceOf[String])
-          val annotExpr = sym.getAnnotation(annot).get.asExprOf[Description]
+          val annotExpr     = sym.getAnnotation(annot).get.asExprOf[Description]
           '{ ($fieldNameExpr, $annotExpr) }
     val seq: Expr[Seq[(String, Description)]] = Expr.ofSeq(tuples)
     '{ $seq.toVector }
@@ -42,4 +42,4 @@ object Description:
         case term if term.tpe =:= annot => term.asExprOf[Description]
     match
       case Some(expr) => '{ Some($expr) }
-      case None => '{ None }
+      case None       => '{ None }

@@ -25,33 +25,36 @@ object JsonSchemaTag:
   // inline derivation of case classes
   inline final given derived[A](using A: Mirror.Of[A]): JsonSchemaTag[A] =
 
-    val description        = Description.readMetaForType[A]
-    val childLabels        = summonLabelsRec[A.MirroredElemLabels].toVector
-    val childSchemas       = summonSchemasRec[A.MirroredElemTypes].toVector.map(_.schemaType)
-    val childDescriptions  = Description.fieldMetaForType[A].toMap
+    val description       = Description.readMetaForType[A]
+    val childLabels       = summonLabelsRec[A.MirroredElemLabels].toVector
+    val childSchemas      = summonSchemasRec[A.MirroredElemTypes].toVector.map(_.schemaType)
+    val childDescriptions = Description.fieldMetaForType[A].toMap
 
     val properties: Map[String, SchemaType] =
-      childLabels.zip(childSchemas).map {
-        case (a, c: ConcreteSchemaType) => (a, c.copy(description = childDescriptions.get(a).map(_.description)))
-        case (a, b) => (a, b)
-      }.toMap
+      childLabels
+        .zip(childSchemas)
+        .map:
+          case (a, c: ConcreteSchemaType) => (a, c.copy(description = childDescriptions.get(a).map(_.description)))
+          case (a, b)                     => (a, b)
+        .toMap
 
-    JsonSchemaTag(ConcreteSchemaType(
-      `type` = "object",
-      description = description.map(_.description),
-      properties = Some(properties)
-    ))
+    JsonSchemaTag(
+      ConcreteSchemaType(
+        `type` = "object",
+        description = description.map(_.description),
+        properties = Some(properties)
+      )
+    )
 
   inline final def summonSchema[A]: JsonSchemaTag[A] = summonFrom:
     case decodeA: JsonSchemaTag[A] => decodeA
-    case _: Mirror.Of[A] => JsonSchemaTag.derived[A]
+    case _: Mirror.Of[A]           => JsonSchemaTag.derived[A]
 
   inline final def summonSchemasRec[T <: Tuple]: List[JsonSchemaTag[?]] =
     inline erasedValue[T] match
       case _: EmptyTuple => Nil
-      case _: (t *: ts) => summonSchema[t] :: summonSchemasRec[ts]
+      case _: (t *: ts)  => summonSchema[t] :: summonSchemasRec[ts]
 
   inline final def summonLabelsRec[T <: Tuple]: List[String] = inline erasedValue[T] match
     case _: EmptyTuple => Nil
-    case _: (t *: ts) => constValue[t].asInstanceOf[String] :: summonLabelsRec[ts]
-
+    case _: (t *: ts)  => constValue[t].asInstanceOf[String] :: summonLabelsRec[ts]

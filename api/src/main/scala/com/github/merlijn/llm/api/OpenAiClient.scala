@@ -9,12 +9,9 @@ import io.circe.syntax._
 import sttp.client3.{Identity, RequestT, SttpBackend, UriContext, basicRequest}
 import sttp.model.Uri
 
-class OpenAiClient[F[_] : Monad](
-     apiToken: Option[String],
-     val backend: SttpBackend[F, ?],
-     val baseUri: Uri = uri"https://api.openai.com/v1"):
+class OpenAiClient[F[_]: Monad](apiToken: Option[String], val backend: SttpBackend[F, ?], val baseUri: Uri = uri"https://api.openai.com/v1"):
 
-  private val logger = org.slf4j.LoggerFactory.getLogger(getClass)
+  private val logger      = org.slf4j.LoggerFactory.getLogger(getClass)
   private val jsonPrinter = io.circe.Printer.noSpaces.copy(dropNullValues = true)
 
   private def parseResponse(response: String): Either[ErrorResponse, ChatCompletionResponse] =
@@ -24,27 +21,31 @@ class OpenAiClient[F[_] : Monad](
   private def sendRequest(request: RequestT[Identity, Either[String, String], Any]): F[Either[ErrorResponse, String]] =
     Monad[F].map(request.send(backend)) { _.body.left.map(e => UnexpectedError(e)) }
 
-  private def performToolCalls(chatRequest: ChatCompletionRequest, response: ChatCompletionResponse, toolImplementations: Seq[ToolImplementation[F, ?]]): EitherT[F, ErrorResponse, ChatCompletionResponse] =
+  private def performToolCalls(
+      chatRequest: ChatCompletionRequest,
+      response: ChatCompletionResponse,
+      toolImplementations: Seq[ToolImplementation[F, ?]]
+  ): EitherT[F, ErrorResponse, ChatCompletionResponse] =
 
     def performToolCall(toolCall: ToolCall): EitherT[F, ErrorResponse, Message] =
       for {
-        toolImpl       <- EitherT.fromOption[F](toolImplementations.find(_.name == toolCall.function.name), ToolNotFound(toolCall.function.name))
-        toolResponse   <- EitherT(toolImpl(toolCall.function.arguments))
+        toolImpl     <- EitherT.fromOption[F](toolImplementations.find(_.name == toolCall.function.name), ToolNotFound(toolCall.function.name))
+        toolResponse <- EitherT(toolImpl(toolCall.function.arguments))
       } yield Message.tool(toolCall.id, toolResponse)
 
     // note: only the first choice is considered
     response.choices.headOption.map(_.message) match
       case Some(msg @ Message(_, _, _, Some(toolCalls))) if toolCalls.nonEmpty =>
         for {
-          toolMessages   <- Traverse[Seq].sequence(toolCalls.map(performToolCall(_)))
-          nextRequest    = chatRequest.copy(messages = chatRequest.messages ++ List(msg) ++ toolMessages)
+          toolMessages <- Traverse[Seq].sequence(toolCalls.map(performToolCall(_)))
+          nextRequest = chatRequest.copy(messages = chatRequest.messages ++ List(msg) ++ toolMessages)
           chatCompletion <- EitherT(chatCompletion(nextRequest, toolImplementations))
         } yield chatCompletion
-      case _             => EitherT.fromEither[F](Right(response))
+      case _ => EitherT.fromEither[F](Right(response))
 
   def chatCompletion(chatRequest: ChatCompletionRequest, toolImplementations: Seq[ToolImplementation[F, ?]] = Nil): F[Either[ErrorResponse, ChatCompletionResponse]] =
 
-    val completionUrl = baseUri.addPath("chat", "completions")
+    val completionUrl    = baseUri.addPath("chat", "completions")
     val jsonBody: String = jsonPrinter.print(chatRequest.asJson)
 
     logger.debug(s"POST $completionUrl - $jsonBody")

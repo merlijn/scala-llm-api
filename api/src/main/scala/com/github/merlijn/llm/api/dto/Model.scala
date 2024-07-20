@@ -9,8 +9,8 @@ import scala.reflect.ClassTag
 case class Message(role: String, content: Option[String], tool_call_id: Option[String] = None, tool_calls: Option[List[ToolCall]] = None)
 
 case object Message:
-  def user(content: String): Message = Message("user", Some(content))
-  def system(content: String): Message = Message("system", Some(content))
+  def user(content: String): Message                     = Message("user", Some(content))
+  def system(content: String): Message                   = Message("system", Some(content))
   def tool(toolCallId: String, content: String): Message = Message("tool", Some(content), tool_call_id = Some(toolCallId))
 
 case class ChatCompletionRequest(
@@ -24,12 +24,12 @@ case class ChatCompletionRequest(
 )
 
 case class Tool(
-  `type`: String = "function",
-  function: Function
+    `type`: String = "function",
+    function: Function
 )
 
 object Tool:
-  def function[T : ClassTag : JsonSchemaTag](description: String): Tool =
+  def function[T: ClassTag: JsonSchemaTag](description: String): Tool =
 
     val name = camelToSnake(summon[ClassTag[T]].runtimeClass.getSimpleName)
 
@@ -41,45 +41,45 @@ object Tool:
     Tool(function = Function(name, description, summon[JsonSchemaTag[T]].schemaType))
 
 case class Function(
-  name: String,
-  description: String,
-  parameters: SchemaType
+    name: String,
+    description: String,
+    parameters: SchemaType
 )
 
 // --- Response
 
 case class ChatCompletionResponse(
-   id: String,
-   `object`: String,
-   created: Long,
-   model: String,
-   choices: List[Choice],
-   usage: Usage,
-   system_fingerprint: Option[String]
+    id: String,
+    `object`: String,
+    created: Long,
+    model: String,
+    choices: List[Choice],
+    usage: Usage,
+    system_fingerprint: Option[String]
 ):
   def firstMessageContent: Option[String] = choices.headOption.flatMap(_.message.content)
 
 case class Choice(
-   index: Int,
-   message: Message,
-   finish_reason: Option[String] // None in case of streaming
+    index: Int,
+    message: Message,
+    finish_reason: Option[String] // None in case of streaming
 )
 
 case class Usage(
-  prompt_tokens: Int,
-  completion_tokens: Int,
-  total_tokens: Int
+    prompt_tokens: Int,
+    completion_tokens: Int,
+    total_tokens: Int
 )
 
 case class ToolCall(
-  id: String,
-  `type`: String,
-  function: FunctionCall
+    id: String,
+    `type`: String,
+    function: FunctionCall
 )
 
 case class FunctionCall(
-  name: String,
-  arguments: String
+    name: String,
+    arguments: String
 )
 
 sealed trait ErrorResponse:
