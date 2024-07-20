@@ -1,26 +1,31 @@
 package com.github.merlijn.llm.api.schema
 
+import io.circe.{Encoder, JsonObject}
+
 import scala.compiletime.*
 import scala.deriving.Mirror
 import scala.runtime.stdLibPatches.Predef.summon
 
-case class DerivedSchema[T](schemaType: SchemaType)
+// similar to ClassTag and TypeTag
+case class JsonSchemaTag[T](schemaType: SchemaType) {
+  def asJson: JsonObject = summon[Encoder[SchemaType]].apply(schemaType).asObject.get
+}
 
-object DerivedSchema {
+object JsonSchemaTag {
 
   // predefined schemas
-  given DerivedSchema[String] = DerivedSchema[String](ConcreteSchemaType("string"))
-  given DerivedSchema[Float] = DerivedSchema[Float](ConcreteSchemaType("number"))
-  given DerivedSchema[Double] = DerivedSchema[Double](ConcreteSchemaType("number"))
-  given DerivedSchema[Int] = DerivedSchema[Int](ConcreteSchemaType("integer"))
-  given DerivedSchema[Boolean] = DerivedSchema[Boolean](ConcreteSchemaType("boolean"))
+  given JsonSchemaTag[String] = JsonSchemaTag[String](ConcreteSchemaType("string"))
+  given JsonSchemaTag[Float] = JsonSchemaTag[Float](ConcreteSchemaType("number"))
+  given JsonSchemaTag[Double] = JsonSchemaTag[Double](ConcreteSchemaType("number"))
+  given JsonSchemaTag[Int] = JsonSchemaTag[Int](ConcreteSchemaType("integer"))
+  given JsonSchemaTag[Boolean] = JsonSchemaTag[Boolean](ConcreteSchemaType("boolean"))
 
-  implicit def listSchema[T](using entries: DerivedSchema[T]): DerivedSchema[List[T]] = {
-    DerivedSchema[List[T]](ConcreteSchemaType(`type` = "array", items = Some(entries.schemaType)))
+  implicit def listSchema[T](using entries: JsonSchemaTag[T]): JsonSchemaTag[List[T]] = {
+    JsonSchemaTag[List[T]](ConcreteSchemaType(`type` = "array", items = Some(entries.schemaType)))
   }
 
   // inline derivation of case classes
-  inline final given derived[A](using A: Mirror.Of[A]): DerivedSchema[A] = {
+  inline final given derived[A](using A: Mirror.Of[A]): JsonSchemaTag[A] = {
 
     val childLabels  = summonLabelsRec[A.MirroredElemLabels].toVector
     val childSchemas = summonSchemasRec[A.MirroredElemTypes].toVector.map(_.schemaType)
@@ -33,7 +38,7 @@ object DerivedSchema {
         case (a, b) => (a, b)
       }.toMap
 
-    DerivedSchema(ConcreteSchemaType(
+    JsonSchemaTag(ConcreteSchemaType(
       `type` = "object",
       title = meta.map(_.title),
       description = meta.map(_.description),
@@ -41,12 +46,12 @@ object DerivedSchema {
     ))
   }
 
-  inline final def summonSchema[A]: DerivedSchema[A] = summonFrom {
-    case decodeA: DerivedSchema[A] => decodeA
-    case _: Mirror.Of[A] => DerivedSchema.derived[A]
+  inline final def summonSchema[A]: JsonSchemaTag[A] = summonFrom {
+    case decodeA: JsonSchemaTag[A] => decodeA
+    case _: Mirror.Of[A] => JsonSchemaTag.derived[A]
   }
 
-  inline final def summonSchemasRec[T <: Tuple]: List[DerivedSchema[?]] =
+  inline final def summonSchemasRec[T <: Tuple]: List[JsonSchemaTag[?]] =
     inline erasedValue[T] match {
       case _: EmptyTuple => Nil
       case _: (t *: ts) => summonSchema[t] :: summonSchemasRec[ts]

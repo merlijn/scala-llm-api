@@ -1,6 +1,6 @@
 package com.github.merlijn.llm.api.schema
 
-import io.circe.{Codec, Decoder, Encoder, HCursor, JsonObject}
+import io.circe.{Codec, Decoder, Encoder, HCursor, Json, JsonObject}
 import io.circe.generic.semiauto.*
 
 type JsonType = "string" | "number" | "integer" | "object" | "array" | "boolean" | "null"
@@ -21,14 +21,10 @@ case class ReferenceType(
   ref: String
 ) extends SchemaType
 
-trait JsonSchema[T] {
-  def asJson: JsonObject
-}
-
 object SchemaType {
 
-  implicit val jsonTypeEncoder: Encoder[JsonType] = Encoder.encodeString.contramap(identity)
-  implicit val jsonTypeDecoder: Decoder[JsonType] = Decoder.decodeString.emap {
+  given jsonTypeEncoder: Encoder[JsonType] = Encoder.encodeString.contramap(identity)
+  given jsonTypeDecoder: Decoder[JsonType] = Decoder.decodeString.emap {
     case "string" => Right("string")
     case "number" => Right("number")
     case "integer" => Right("integer")
@@ -39,7 +35,7 @@ object SchemaType {
     case other => Left(s"Unknown JSON type: $other")
   }
 
-  implicit val referenceCodec: Codec.AsObject[ReferenceType] = deriveCodec[ReferenceType]
+  given referenceCodec: Codec.AsObject[ReferenceType] = deriveCodec[ReferenceType]
 
   implicit def concreteSchemaTypeDecoder(implicit decoder: Decoder[SchemaType]): Decoder[ConcreteSchemaType] = new Decoder[ConcreteSchemaType] {
     final def apply(c: HCursor): Decoder.Result[ConcreteSchemaType] =
@@ -51,21 +47,23 @@ object SchemaType {
       }
   }
 
+  implicit class JsonObjectOps(val base: JsonObject) extends AnyVal {
+    def addMaybe[T : Encoder](fieldName: String, value: Option[T]): JsonObject =
+      value.fold(base)(v => base.add(fieldName, summon[Encoder[T]].apply(v)))
+  }
+
   implicit def concreteSchemaTypeEncoder(implicit schemaEncoder: Encoder[SchemaType]): Encoder[ConcreteSchemaType] = Encoder.instance { a =>
       val base = JsonObject("type" -> Encoder[JsonType].apply(a.`type`))
       val parametersEncoder = summon[Encoder[Map[String, SchemaType]]]
 
-      a.parameters.fold(base)(parameters => base.add("parameters", parametersEncoder.apply(parameters))).toJson
+      def addMaybe[T : Encoder](base: JsonObject, fieldName: String, value: Option[T]): JsonObject =
+        value.fold(base)(v => base.add(fieldName, summon[Encoder[T]].apply(v)))
 
-//      a.title.fold(base)(title => base.add("title", Encoder[String].apply(title))).toJson
+      base
+        .addMaybe("title", a.title)
+        .addMaybe("description", a.description)
+        .addMaybe("parameters", a.parameters).toJson
     }
-
-//  implicit val concreteEncoder: Encoder.AsObject[ConcreteSchemaType] =
-//    implicit def treeDecoder[A: Encoder]: Encoder[SchemaType[A]] = {
-//      Encoder.recursive { implicit recurse =>
-//        List[Encoder[SchemaType[A]]](Encoder[ConcreteSchemaType[A]].widen, Encoder[ReferenceType[A]].widen).reduce(_ or _)
-//      }
-//    }
 
   implicit val concreteEncoder: Encoder[SchemaType] = {
       Encoder.recursive { implicit recurse =>

@@ -9,7 +9,7 @@ case class Person(
 
 object Test extends App {
 
-  val d = summon[DerivedSchema[Person]]
+  val d = summon[JsonSchemaTag[Person]]
 
   val json = d.schemaType.asJson
 
