@@ -4,7 +4,6 @@ import com.github.merlijn.llm.api.dto.*
 import com.github.merlijn.llm.api.schema.{Description, JsonSchemaTag}
 import com.github.merlijn.llm.api.{OpenAiClient, ToolImplementation}
 import io.circe.Decoder
-import io.circe.generic.semiauto.deriveDecoder
 import sttp.client3.HttpClientFutureBackend
 import sttp.model.Uri
 
@@ -15,12 +14,7 @@ import cats.instances.future._
 @Description("Returns the status of a package by it's ID")
 case class GetPackageById(
   @Description("The id of the package") package_id: String
-)
-
-object GetPackageById {
-  given getPackageByIdSchema: JsonSchemaTag[GetPackageById] = JsonSchemaTag.derived[GetPackageById]
-  given decoder: Decoder[GetPackageById] = deriveDecoder[GetPackageById]
-}
+) derives JsonSchemaTag, Decoder
 
 object ExampleFunctionCall {
 

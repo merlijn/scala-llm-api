@@ -25,14 +25,14 @@ object SchemaType {
 
   given jsonTypeEncoder: Encoder[JsonType] = Encoder.encodeString.contramap(identity)
   given jsonTypeDecoder: Decoder[JsonType] = Decoder.decodeString.emap {
-    case "string" => Right("string")
-    case "number" => Right("number")
+    case "string"  => Right("string")
+    case "number"  => Right("number")
     case "integer" => Right("integer")
-    case "object" => Right("object")
-    case "array" => Right("array")
+    case "object"  => Right("object")
+    case "array"   => Right("array")
     case "boolean" => Right("boolean")
-    case "null" => Right("null")
-    case other => Left(s"Unknown JSON type: $other")
+    case "null"    => Right("null")
+    case other     => Left(s"Unknown JSON type: $other")
   }
 
   given referenceCodec: Codec.AsObject[ReferenceType] = deriveCodec[ReferenceType]
@@ -52,7 +52,7 @@ object SchemaType {
       value.fold(base)(v => base.add(fieldName, summon[Encoder[T]].apply(v)))
   }
 
-  implicit def concreteSchemaTypeEncoder(implicit schemaEncoder: Encoder[SchemaType]): Encoder[ConcreteSchemaType] = Encoder.instance { a =>
+  implicit def concreteSchemaTypeEncoder(using schemaEncoder: Encoder[SchemaType]): Encoder[ConcreteSchemaType] = Encoder.instance { a =>
       val base = JsonObject("type" -> Encoder[JsonType].apply(a.`type`))
       val parametersEncoder = summon[Encoder[Map[String, SchemaType]]]
 

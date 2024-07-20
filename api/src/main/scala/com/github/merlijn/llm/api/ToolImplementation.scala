@@ -9,8 +9,6 @@ import scala.reflect.ClassTag
 class ToolImplementation[F[_] : Monad, T : Decoder](val name: String, val function: T => F[String]) {
   val logger = org.slf4j.LoggerFactory.getLogger(getClass)
   def apply(value: String): F[Either[ErrorResponse, String]] = {
-    logger.info(s"Decoding $value")
-
     io.circe.parser.decode[T](value) match {
         case Left(error)  => Monad[F].pure(Left(JsonParsingError(error)))
         case Right(value) => Monad[F].map(function.apply(value))(Right(_))
