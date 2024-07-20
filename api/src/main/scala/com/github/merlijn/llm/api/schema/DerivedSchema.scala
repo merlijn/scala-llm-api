@@ -23,7 +23,7 @@ object DerivedSchema {
   inline final given derived[A](using A: Mirror.Of[A]): DerivedSchema[A] = {
 
     val childLabels  = summonLabelsRec[A.MirroredElemLabels].toVector
-    val childSchemas = summonDescriptorsRec[A.MirroredElemTypes].toVector.map(_.schemaType)
+    val childSchemas = summonSchemasRec[A.MirroredElemTypes].toVector.map(_.schemaType)
     val childMeta = Meta.fieldMetaForType[A].toMap
     val meta = Meta.readMetaForType[A]
 
@@ -37,19 +37,19 @@ object DerivedSchema {
       `type` = "object",
       title = meta.map(_.title),
       description = meta.map(_.description),
-      parameters = parameters
+      parameters = Some(parameters)
     ))
   }
 
-  inline final def summonDescriptor[A]: DerivedSchema[A] = summonFrom {
+  inline final def summonSchema[A]: DerivedSchema[A] = summonFrom {
     case decodeA: DerivedSchema[A] => decodeA
     case _: Mirror.Of[A] => DerivedSchema.derived[A]
   }
 
-  inline final def summonDescriptorsRec[T <: Tuple]: List[DerivedSchema[?]] =
+  inline final def summonSchemasRec[T <: Tuple]: List[DerivedSchema[?]] =
     inline erasedValue[T] match {
       case _: EmptyTuple => Nil
-      case _: (t *: ts) => summonDescriptor[t] :: summonDescriptorsRec[ts]
+      case _: (t *: ts) => summonSchema[t] :: summonSchemasRec[ts]
     }
 
   inline final def summonLabelsRec[T <: Tuple]: List[String] = inline erasedValue[T] match {

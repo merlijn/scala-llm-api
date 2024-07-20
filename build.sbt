@@ -7,7 +7,7 @@ val commonSettings = Seq(
   organization := "com.github.merlijn",
 )
 
-val circeVersion = "0.14.1"
+val circeVersion = "0.14.9"
 
 lazy val api = project
   .in(file("api"))

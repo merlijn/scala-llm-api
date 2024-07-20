@@ -51,7 +51,7 @@ class OpenAiClient[F[_] : Monad](
   def chatCompletion(chatRequest: ChatCompletionRequest, toolImplementations: Seq[ToolImplementation[F, ?]] = Nil): F[Either[ErrorResponse, ChatCompletionResponse]] = {
 
     val completionUrl = baseUri.addPath("chat", "completions")
-    val jsonBody = jsonPrinter.print(chatRequest.asJson)
+    val jsonBody: String = jsonPrinter.print(chatRequest.asJson)
 
     logger.debug(s"POST $completionUrl - $jsonBody")
 
