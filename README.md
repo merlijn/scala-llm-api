@@ -24,11 +24,12 @@ Look in the `examples` directory for example usages:
 Usage:
 
 ```bash
-# copy the example env file
+# 1. copy the example env file
 cp .env.example .env
-# edit the .env file to include your API key
 
-# run an example
+# 2. edit the .env file to include your API key
+
+# 3. run an example
 sbt 'telegramBot/run'
 ```
 

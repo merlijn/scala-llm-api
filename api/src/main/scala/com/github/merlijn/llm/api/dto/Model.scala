@@ -8,11 +8,10 @@ import scala.reflect.ClassTag
 
 case class Message(role: String, content: Option[String], tool_call_id: Option[String] = None, tool_calls: Option[List[ToolCall]] = None)
 
-case object Message {
+case object Message:
   def user(content: String): Message = Message("user", Some(content))
   def system(content: String): Message = Message("system", Some(content))
   def tool(toolCallId: String, content: String): Message = Message("tool", Some(content), tool_call_id = Some(toolCallId))
-}
 
 case class ChatCompletionRequest(
     model: String,
@@ -29,8 +28,8 @@ case class Tool(
   function: Function
 )
 
-object Tool {
-  def function[T : ClassTag : JsonSchemaTag](description: String): Tool = {
+object Tool:
+  def function[T : ClassTag : JsonSchemaTag](description: String): Tool =
 
     val name = camelToSnake(summon[ClassTag[T]].runtimeClass.getSimpleName)
 
@@ -40,8 +39,6 @@ object Tool {
         .remove("$id")
 
     Tool(function = Function(name, description, summon[JsonSchemaTag[T]].schemaType))
-  }
-}
 
 case class Function(
   name: String,
@@ -59,9 +56,8 @@ case class ChatCompletionResponse(
    choices: List[Choice],
    usage: Usage,
    system_fingerprint: Option[String]
-) {
+):
   def firstMessageContent: Option[String] = choices.headOption.flatMap(_.message.content)
-}
 
 case class Choice(
    index: Int,
@@ -86,14 +82,11 @@ case class FunctionCall(
   arguments: String
 )
 
-sealed trait ErrorResponse {
+sealed trait ErrorResponse:
   def message: String
-}
 
-case class ToolNotFound(toolName: String) extends ErrorResponse {
+case class ToolNotFound(toolName: String) extends ErrorResponse:
   override def message: String = s"Tool with name $toolName not found"
-}
 case class UnexpectedError(message: String) extends ErrorResponse
-case class JsonParsingError(reason: io.circe.Error) extends ErrorResponse {
+case class JsonParsingError(reason: io.circe.Error) extends ErrorResponse:
   override def message: String = reason.getMessage
-}

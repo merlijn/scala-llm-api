@@ -1,6 +1,6 @@
 package com.github.merlijn.llm.api.dto
 
-object CirceCodecs {
+object CirceCodecs:
   import io.circe._
   import io.circe.generic.semiauto._
 
@@ -17,4 +17,3 @@ object CirceCodecs {
   given choiceDecoder: Decoder[Choice] = deriveDecoder
 
   given chatCompletionResponseCodec: Decoder[ChatCompletionResponse] = deriveDecoder
-}

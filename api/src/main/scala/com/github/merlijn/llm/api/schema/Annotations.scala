@@ -4,7 +4,7 @@ import scala.annotation.StaticAnnotation
 
 class Description(val description: String) extends StaticAnnotation
 
-object Description {
+object Description:
 
   import scala.quoted.*
 
@@ -43,4 +43,3 @@ object Description {
     match
       case Some(expr) => '{ Some($expr) }
       case None => '{ None }
-}

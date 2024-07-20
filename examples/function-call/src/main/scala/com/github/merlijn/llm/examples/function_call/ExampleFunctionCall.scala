@@ -16,12 +16,12 @@ case class GetPackageById(
   @Description("The id of the package") package_id: String
 ) derives JsonSchemaTag, Decoder
 
-object ExampleFunctionCall {
+object ExampleFunctionCall:
 
   val logger = org.slf4j.LoggerFactory.getLogger(getClass)
 
   @main
-  def run(): Unit = {
+  def run(): Unit =
     given ec: ExecutionContext = scala.concurrent.ExecutionContext.global
 
     val llmToken = sys.env.get("LLM_TOKEN")
@@ -37,11 +37,10 @@ object ExampleFunctionCall {
     val getPackageById = Tool.function[GetPackageById]("Get the status of a package by it's ID")
 
     val function: GetPackageById => Future[String] = getPackageById =>
-      Future {
+      Future:
         logger.info(s"Function called for ${getPackageById.package_id}")
         Thread.sleep(500)
         s"The package with id ${getPackageById.package_id} is currently in transit, estimated delivery is tomorrow."
-      }
 
     val getPackageByIdImpl = ToolImplementation.fromFunction[Future, GetPackageById](function)
 
@@ -56,9 +55,6 @@ object ExampleFunctionCall {
 
     val response = Await.result(openAiClient.chatCompletion(request, Seq(getPackageByIdImpl)), 5.seconds)
 
-    response match {
+    response match
       case Right(response) => println(response.firstMessageContent)
       case Left(error)     => println(error.message)
-    }
-  }
-}

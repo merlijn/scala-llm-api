@@ -7,11 +7,10 @@ import scala.deriving.Mirror
 import scala.runtime.stdLibPatches.Predef.summon
 
 // similar to ClassTag and TypeTag
-case class JsonSchemaTag[T](schemaType: SchemaType) {
+case class JsonSchemaTag[T](schemaType: SchemaType):
   def asJson: JsonObject = summon[Encoder[SchemaType]].apply(schemaType).asObject.get
-}
 
-object JsonSchemaTag {
+object JsonSchemaTag:
 
   // predefined schemas
   given JsonSchemaTag[String]  = JsonSchemaTag[String](ConcreteSchemaType("string"))
@@ -20,12 +19,11 @@ object JsonSchemaTag {
   given JsonSchemaTag[Int]     = JsonSchemaTag[Int](ConcreteSchemaType("integer"))
   given JsonSchemaTag[Boolean] = JsonSchemaTag[Boolean](ConcreteSchemaType("boolean"))
 
-  implicit def listSchema[T](using entries: JsonSchemaTag[T]): JsonSchemaTag[List[T]] = {
+  implicit def listSchema[T](using entries: JsonSchemaTag[T]): JsonSchemaTag[List[T]] =
     JsonSchemaTag[List[T]](ConcreteSchemaType(`type` = "array", items = Some(entries.schemaType)))
-  }
 
   // inline derivation of case classes
-  inline final given derived[A](using A: Mirror.Of[A]): JsonSchemaTag[A] = {
+  inline final given derived[A](using A: Mirror.Of[A]): JsonSchemaTag[A] =
 
     val description        = Description.readMetaForType[A]
     val childLabels        = summonLabelsRec[A.MirroredElemLabels].toVector
@@ -43,22 +41,17 @@ object JsonSchemaTag {
       description = description.map(_.description),
       properties = Some(properties)
     ))
-  }
 
-  inline final def summonSchema[A]: JsonSchemaTag[A] = summonFrom {
+  inline final def summonSchema[A]: JsonSchemaTag[A] = summonFrom:
     case decodeA: JsonSchemaTag[A] => decodeA
     case _: Mirror.Of[A] => JsonSchemaTag.derived[A]
-  }
 
   inline final def summonSchemasRec[T <: Tuple]: List[JsonSchemaTag[?]] =
-    inline erasedValue[T] match {
+    inline erasedValue[T] match
       case _: EmptyTuple => Nil
       case _: (t *: ts) => summonSchema[t] :: summonSchemasRec[ts]
-    }
 
-  inline final def summonLabelsRec[T <: Tuple]: List[String] = inline erasedValue[T] match {
+  inline final def summonLabelsRec[T <: Tuple]: List[String] = inline erasedValue[T] match
     case _: EmptyTuple => Nil
     case _: (t *: ts) => constValue[t].asInstanceOf[String] :: summonLabelsRec[ts]
-  }
-}
 

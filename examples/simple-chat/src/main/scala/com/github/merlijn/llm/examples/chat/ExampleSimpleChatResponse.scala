@@ -5,7 +5,7 @@ import com.github.merlijn.llm.api.dto.{ChatCompletionRequest, Message}
 import sttp.client3.HttpClientSyncBackend
 import sttp.model.Uri
 
-object ExampleSimpleChatResponse extends App {
+object ExampleSimpleChatResponse extends App:
 
   val logger = org.slf4j.LoggerFactory.getLogger(getClass)
 
@@ -27,11 +27,9 @@ object ExampleSimpleChatResponse extends App {
     )
   )
 
-  openAiClient.chatCompletion(chatRequest) match {
+  openAiClient.chatCompletion(chatRequest) match
     case Right(response) => response.firstMessageContent.foreach(logger.info)
     case Left(error)     => logger.error(error.message)
-  }
-}
 
 
 

@@ -11,10 +11,10 @@ import sttp.model.Uri
 import telegramium.bots.high.*
 import telegramium.bots.{ChatIntId, Message}
 
-object ExampleTelegramBot {
+object ExampleTelegramBot:
 
   @main
-  def run(): Unit = {
+  def run(): Unit =
     given ioRuntime: IORuntime = cats.effect.unsafe.IORuntime.global
 
     val logger = org.slf4j.LoggerFactory.getLogger(getClass)
@@ -32,25 +32,22 @@ object ExampleTelegramBot {
         baseUri = Uri.parse(llmBaseUrl).getOrElse(throw new IllegalStateException("Invalid base URL"))
       )
       telegramBackend <- BlazeClientBuilder[IO].resource
-    } yield {
+    } yield
       val api: Api[IO] = BotApi(telegramBackend, baseUrl = s"https://api.telegram.org/bot$telegramToken")
       new TelegramLLMBot(api, openAiClient, llmModel)
-    }
 
     botResource.use { bot =>
       bot.start()
     }.unsafeRunSync()
-  }
-}
 
 class TelegramLLMBot[F[_]: Async: Parallel : Monad](
     api: Api[F],
     llmClient: OpenAiClient[F],
-    llmModel: String) extends LongPollBot[F](api) {
+    llmModel: String) extends LongPollBot[F](api):
 
   val logger = org.slf4j.LoggerFactory.getLogger(getClass)
 
-  override def onMessage(msg: Message): F[Unit] = {
+  override def onMessage(msg: Message): F[Unit] =
 
     val chatRequest = dto.ChatCompletionRequest(
       model = llmModel,
@@ -64,19 +61,15 @@ class TelegramLLMBot[F[_]: Async: Parallel : Monad](
 
     Monad[F].flatMap(llmClient.chatCompletion(chatRequest)) {
       case Right(response) =>
-        response.firstMessageContent match {
+        response.firstMessageContent match
           case None =>
             api.execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = "Failed to get response from LLM.")).void
           case Some(content) =>
             api.execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = content)).void
-        }
       case Left(error) =>
         logger.error(s"Failed to send message to LLM or to send response to user: ${error}")
         api.execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = "An error occurred while processing your request. Please try again later.")).void
-    }.recover {
+    }.recover:
       case ex: Exception =>
         logger.error(s"Failed to send message to LLM or to send response to user: ${ex.getMessage}")
         api.execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = "An error occurred while processing your request. Please try again later.")).void
-    }
-  }
-}
