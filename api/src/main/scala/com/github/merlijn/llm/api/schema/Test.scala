@@ -3,8 +3,8 @@ package com.github.merlijn.llm.api.schema
 import io.circe.syntax.*
 
 case class Person(
-   @Meta(title = "Name", description = "The name of the person") name: String,
-   age: Int)
+                   @Description("The name of the person") name: String,
+                   age: Int)
 
 
 object Test extends App {

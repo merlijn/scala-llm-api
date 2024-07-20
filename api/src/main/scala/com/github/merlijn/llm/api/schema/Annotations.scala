@@ -2,20 +2,20 @@ package com.github.merlijn.llm.api.schema
 
 import scala.annotation.StaticAnnotation
 
-class Meta(val title: String, val description: String) extends StaticAnnotation
+class Description(val description: String) extends StaticAnnotation
 
-object Meta {
+object Description {
 
   import scala.quoted.*
 
-  inline def fieldMetaForType[T]: Vector[(String, Meta)] = ${
+  inline def fieldMetaForType[T]: Vector[(String, Description)] = ${
     readFieldMeta[T]
   }
 
-  private def readFieldMeta[T: Type](using q: Quotes): Expr[Vector[(String, Meta)]] =
+  private def readFieldMeta[T: Type](using q: Quotes): Expr[Vector[(String, Description)]] =
     import quotes.reflect.*
-    val annot = TypeRepr.of[Meta].typeSymbol
-    val tuples: Seq[Expr[(String, Meta)]] = TypeRepr
+    val annot = TypeRepr.of[Description].typeSymbol
+    val tuples: Seq[Expr[(String, Description)]] = TypeRepr
       .of[T]
       .typeSymbol
       .primaryConstructor
@@ -24,22 +24,22 @@ object Meta {
       .collect:
         case sym if sym.hasAnnotation(annot) =>
           val fieldNameExpr = Expr(sym.name.asInstanceOf[String])
-          val annotExpr = sym.getAnnotation(annot).get.asExprOf[Meta]
+          val annotExpr = sym.getAnnotation(annot).get.asExprOf[Description]
           '{ ($fieldNameExpr, $annotExpr) }
-    val seq: Expr[Seq[(String, Meta)]] = Expr.ofSeq(tuples)
+    val seq: Expr[Seq[(String, Description)]] = Expr.ofSeq(tuples)
     '{ $seq.toVector }
 
-  inline def readMetaForType[T]: Option[Meta] = ${ readMetaForTypeImpl[T] }
+  inline def readMetaForType[T]: Option[Description] = ${ readMetaForTypeImpl[T] }
 
-  private def readMetaForTypeImpl[T: Type](using Quotes): Expr[Option[Meta]] =
+  private def readMetaForTypeImpl[T: Type](using Quotes): Expr[Option[Description]] =
     import quotes.reflect.*
-    val annot = TypeRepr.of[Meta]
+    val annot = TypeRepr.of[Description]
     TypeRepr
       .of[T]
       .typeSymbol
       .annotations
       .collectFirst:
-        case term if term.tpe =:= annot => term.asExprOf[Meta]
+        case term if term.tpe =:= annot => term.asExprOf[Description]
     match
       case Some(expr) => '{ Some($expr) }
       case None => '{ None }

@@ -29,18 +29,17 @@ object JsonSchemaTag {
 
     val childLabels  = summonLabelsRec[A.MirroredElemLabels].toVector
     val childSchemas = summonSchemasRec[A.MirroredElemTypes].toVector.map(_.schemaType)
-    val childMeta = Meta.fieldMetaForType[A].toMap
-    val meta = Meta.readMetaForType[A]
+    val childMeta = Description.fieldMetaForType[A].toMap
+    val meta = Description.readMetaForType[A]
 
     val parameters: Map[String, SchemaType] =
       childLabels.zip(childSchemas).map {
-        case (a, c: ConcreteSchemaType) => (a, c.copy(title = childMeta.get(a).map(_.title), description = childMeta.get(a).map(_.description)))
+        case (a, c: ConcreteSchemaType) => (a, c.copy(description = childMeta.get(a).map(_.description)))
         case (a, b) => (a, b)
       }.toMap
 
     JsonSchemaTag(ConcreteSchemaType(
       `type` = "object",
-      title = meta.map(_.title),
       description = meta.map(_.description),
       parameters = Some(parameters)
     ))
