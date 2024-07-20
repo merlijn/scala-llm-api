@@ -1,9 +1,8 @@
 package com.github.merlijn.llm.api.dto
 
 import com.github.merlijn.llm.api.camelToSnake
+import com.github.merlijn.llm.api.schema.{JsonSchemaTag, SchemaType}
 import io.circe.JsonObject
-import json.Schema
-import json.schema.Version.Draft12
 
 import scala.reflect.ClassTag
 
@@ -31,26 +30,23 @@ case class Tool(
 )
 
 object Tool {
-  def function[T : ClassTag](description: String)(implicit schema: Schema[T]): Tool = {
-    import com.github.andyglow.jsonschema.AsCirce._
-    import com.github.andyglow.jsonschema.AsValueBuilder._
+  def function[T : ClassTag : JsonSchemaTag](description: String): Tool = {
 
-    val name = camelToSnake(implicitly[ClassTag[T]].runtimeClass.getSimpleName)
+    val name = camelToSnake(summon[ClassTag[T]].runtimeClass.getSimpleName)
 
     val json =
-      schema.asCirce(Draft12("Test"))
-        .asObject.get
+      summon[JsonSchemaTag[T]].asJson
         .remove("$schema")
         .remove("$id")
 
-    Tool(function = Function(name, description, json))
+    Tool(function = Function(name, description, summon[JsonSchemaTag[T]].schemaType))
   }
 }
 
 case class Function(
   name: String,
   description: String,
-  parameters: JsonObject
+  parameters: SchemaType
 )
 
 // --- Response

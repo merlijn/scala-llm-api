@@ -4,17 +4,17 @@ object CirceCodecs {
   import io.circe._
   import io.circe.generic.semiauto._
 
-  implicit val functionCodec: Codec[FunctionCall] = deriveCodec
-  implicit val toolCodec: Codec[ToolCall] = deriveCodec
+  given functionCodec: Codec[FunctionCall] = deriveCodec
+  given toolCodec: Codec[ToolCall] = deriveCodec
 
-  implicit val messageEncoder: Codec[Message] = deriveCodec
-  implicit val chatRequestEncoder: Codec[ChatCompletionRequest] = deriveCodec
-  implicit val toolEncoder: Codec[Tool] = deriveCodec
-  implicit val functionEncoder: Codec[Function] = deriveCodec
+  given messageEncoder: Codec[Message] = deriveCodec
+  given chatRequestEncoder: Codec[ChatCompletionRequest] = deriveCodec
+  given toolEncoder: Codec[Tool] = deriveCodec
+  given functionEncoder: Codec[Function] = deriveCodec
 
-  implicit val usageDecoder: Codec[Usage] = deriveCodec
+  given usageDecoder: Codec[Usage] = deriveCodec
 
-  implicit val choiceDecoder: Decoder[Choice] = deriveDecoder
+  given choiceDecoder: Decoder[Choice] = deriveDecoder
 
-  implicit val chatCompletionResponseCodec: Decoder[ChatCompletionResponse] = deriveDecoder
+  given chatCompletionResponseCodec: Decoder[ChatCompletionResponse] = deriveDecoder
 }
