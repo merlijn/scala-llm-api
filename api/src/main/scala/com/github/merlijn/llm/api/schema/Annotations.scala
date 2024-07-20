@@ -2,7 +2,7 @@ package com.github.merlijn.llm.api.schema
 
 import scala.annotation.StaticAnnotation
 
-class Meta(val name: String, val description: String) extends StaticAnnotation
+class Meta(val title: String, val description: String) extends StaticAnnotation
 
 object Meta {
 
@@ -28,4 +28,19 @@ object Meta {
           '{ ($fieldNameExpr, $annotExpr) }
     val seq: Expr[Seq[(String, Meta)]] = Expr.ofSeq(tuples)
     '{ $seq.toVector }
+
+  inline def readMetaForType[T]: Option[Meta] = ${ readMetaForTypeImpl[T] }
+
+  private def readMetaForTypeImpl[T: Type](using Quotes): Expr[Option[Meta]] =
+    import quotes.reflect.*
+    val annot = TypeRepr.of[Meta]
+    TypeRepr
+      .of[T]
+      .typeSymbol
+      .annotations
+      .collectFirst:
+        case term if term.tpe =:= annot => term.asExprOf[Meta]
+    match
+      case Some(expr) => '{ Some($expr) }
+      case None => '{ None }
 }
