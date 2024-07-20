@@ -13,9 +13,8 @@ import cats.instances.future._
 
 @Description("Returns the status of a package by it's ID")
 case class GetPackageById(
-    @Description("The id of the package") package_id: String
-) derives JsonSchemaTag,
-      Decoder
+  @Description("The id of the package") package_id: String
+) derives JsonSchemaTag, Decoder
 
 object ExampleFunctionCall:
 

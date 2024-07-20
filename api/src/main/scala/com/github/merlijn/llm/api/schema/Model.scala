@@ -8,17 +8,17 @@ type JsonType = "string" | "number" | "integer" | "object" | "array" | "boolean"
 sealed trait SchemaType
 
 case class ConcreteSchemaType(
-    `type`: JsonType,
-    title: Option[String] = None,
-    description: Option[String] = None,
-    properties: Option[Map[String, SchemaType]] = None,
-    required: Option[List[String]] = None,
-    items: Option[SchemaType] = None,
-    defs: Option[Map[String, SchemaType]] = None
+  `type`: JsonType,
+  title: Option[String] = None,
+  description: Option[String] = None,
+  properties: Option[Map[String, SchemaType]] = None,
+  required: Option[List[String]] = None,
+  items: Option[SchemaType] = None,
+  defs: Option[Map[String, SchemaType]] = None
 ) extends SchemaType
 
 case class ReferenceType(
-    ref: String
+  ref: String
 ) extends SchemaType
 
 object SchemaType:

@@ -22,9 +22,9 @@ class OpenAiClient[F[_]: Monad](apiToken: Option[String], val backend: SttpBacke
     Monad[F].map(request.send(backend)) { _.body.left.map(e => UnexpectedError(e)) }
 
   private def performToolCalls(
-      chatRequest: ChatCompletionRequest,
-      response: ChatCompletionResponse,
-      toolImplementations: Seq[ToolImplementation[F, ?]]
+    chatRequest: ChatCompletionRequest,
+    response: ChatCompletionResponse,
+    toolImplementations: Seq[ToolImplementation[F, ?]]
   ): EitherT[F, ErrorResponse, ChatCompletionResponse] =
 
     def performToolCall(toolCall: ToolCall): EitherT[F, ErrorResponse, Message] =

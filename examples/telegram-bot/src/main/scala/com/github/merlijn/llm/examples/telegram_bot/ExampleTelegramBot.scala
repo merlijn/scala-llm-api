@@ -1,7 +1,7 @@
 package com.github.merlijn.llm.examples.telegram_bot
 
 import cats.effect.unsafe.IORuntime
-import cats.effect.{Async, IO}
+import cats.effect.{Async, IO, IOApp}
 import cats.syntax.all.*
 import cats.{Monad, Parallel}
 import com.github.merlijn.llm.api.{OpenAiClient, dto}
@@ -11,10 +11,9 @@ import sttp.model.Uri
 import telegramium.bots.high.*
 import telegramium.bots.{ChatIntId, Message}
 
-object ExampleTelegramBot:
+object ExampleTelegramBot extends IOApp.Simple:
 
-  @main
-  def run(): Unit =
+  override val run =
     given ioRuntime: IORuntime = cats.effect.unsafe.IORuntime.global
 
     val logger = org.slf4j.LoggerFactory.getLogger(getClass)
@@ -22,7 +21,7 @@ object ExampleTelegramBot:
     val llmToken      = sys.env.get("LLM_TOKEN")
     val llmBaseUrl    = sys.env.getOrElse("LLM_BASE_URL", "https://api.openai.com/v1")
     val llmModel      = sys.env.getOrElse("LLM_MODEL", "gpt-3.5-turbo")
-    val telegramToken = sys.env.getOrElse("TELEGRAM_TOKEN", throw new IllegalStateException("TELEGRAM_TOKEN env variable not set"))
+    val telegramToken = sys.env.getOrElse("TELEGRAM_BOT_TOKEN", throw new IllegalStateException("TELEGRAM_BOT_TOKEN env variable not set"))
 
     val botResource = for {
       openAiClientBackend <- HttpClientCatsBackend.resource[IO]()
@@ -36,10 +35,8 @@ object ExampleTelegramBot:
     } yield new TelegramLLMBot(api, openAiClient, llmModel)
 
     botResource
-      .use { bot =>
-        bot.start()
-      }
-      .unsafeRunSync()
+      .use(_.start())
+      .void
 
 class TelegramLLMBot[F[_]: Async: Parallel: Monad](api: Api[F], llmClient: OpenAiClient[F], llmModel: String) extends LongPollBot[F](api):
 
@@ -58,18 +55,19 @@ class TelegramLLMBot[F[_]: Async: Parallel: Monad](api: Api[F], llmClient: OpenA
       temperature = Some(0.8)
     )
 
-    Monad[F]
-      .flatMap(llmClient.chatCompletion(chatRequest)):
+    def reply(text: String) = api.execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = text)).void
+
+    llmClient
+      .chatCompletion(chatRequest)
+      .flatMap:
         case Right(response) =>
           response.firstMessageContent match
-            case None =>
-              api.execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = errorMessage)).void
-            case Some(content) =>
-              api.execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = content)).void
+            case None          => reply(errorMessage)
+            case Some(content) => reply(content)
         case Left(error) =>
-          logger.error(s"Failed to send message to LLM or to send response to user: ${error}")
-          api.execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = errorMessage)).void
+          logger.error(s"LLM Request returned an error: ${error}")
+          reply(errorMessage)
       .recover:
         case ex: Exception =>
           logger.error(s"Failed to send message to LLM or to send response to user: ${ex.getMessage}", ex)
-          api.execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = errorMessage)).void
+          reply(errorMessage)
