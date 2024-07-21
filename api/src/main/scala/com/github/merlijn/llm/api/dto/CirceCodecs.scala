@@ -14,3 +14,5 @@ object CirceCodecs:
   given usageDecoder: Codec[Usage]                                   = deriveCodec
   given choiceDecoder: Decoder[Choice]                               = deriveDecoder
   given chatCompletionResponseCodec: Decoder[ChatCompletionResponse] = deriveDecoder
+  given modelCodec: Codec[Model]                                     = deriveCodec
+  given modelListResponseCodec: Decoder[ModelListResponse]           = deriveDecoder

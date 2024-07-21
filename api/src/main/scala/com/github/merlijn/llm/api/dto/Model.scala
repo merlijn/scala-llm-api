@@ -13,6 +13,17 @@ case object Message:
   def system(content: String): Message                   = Message("system", Some(content))
   def tool(toolCallId: String, content: String): Message = Message("tool", Some(content), tool_call_id = Some(toolCallId))
 
+case class Model(
+  id: String,
+  `object`: String,
+  created: Long,
+  owned_by: String
+)
+
+case class ModelListResponse(
+  data: List[Model]
+)
+
 case class ChatCompletionRequest(
   model: String,
   messages: List[Message],

@@ -7,6 +7,8 @@ import telegramium.bots.{ChatIntId, Markdown, Message, ParseMode}
 import telegramium.bots.high.{Api, LongPollBot, Methods}
 import cats.syntax.all.*
 
+import scala.collection.immutable.Nil
+
 case class ChatConfig(
   llmModel: String,
   llmSystemPrompt: String,
@@ -45,8 +47,19 @@ class ChatBot[F[_]: Async: Parallel](
       api.execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = text, parseMode = chatConfig.parseMode)).void
 
     msg.text match
-      case None           => Monad[F].unit
+      case None =>
+        logger.info(s"Received a message without text: ${msg}")
+        Monad[F].unit
       case Some("/start") => reply(welcomeMessage)
+      case Some("/list") =>
+        llmClient.listModels().flatMap:
+          case Right(models) =>
+            val modelList = models.map(m => m.id).mkString("- ", "\n- ", "")
+            reply(modelList)
+          case Left(error) =>
+            logger.error(s"LLM Request returned an error: ${error}")
+            reply("Error while fetching models")
+
       case Some(userMessage) =>
         logger.info(s"Processing message from ${msg.from.map(_.firstName)}")
 

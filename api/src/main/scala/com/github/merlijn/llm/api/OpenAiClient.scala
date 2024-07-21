@@ -14,11 +14,15 @@ class OpenAiClient[F[_]: Monad](apiToken: Option[String], val backend: SttpBacke
   private val logger      = org.slf4j.LoggerFactory.getLogger(getClass)
   private val jsonPrinter = io.circe.Printer.noSpaces.copy(dropNullValues = true)
 
+  val authenticationHeaders: Seq[(String, String)] = apiToken.map(token => "Authorization" -> s"Bearer $token").toSeq
+  val apiRequest                                   = basicRequest.headers(Map(authenticationHeaders*))
+
   private def parseResponse(response: String): Either[ErrorResponse, ChatCompletionResponse] =
     logger.debug(s"Response body - $response")
     decode[ChatCompletionResponse](response).left.map(JsonParsingError(_))
 
   private def sendRequest(request: RequestT[Identity, Either[String, String], Any]): F[Either[ErrorResponse, String]] =
+    logger.debug(s"Sending request - ${request.method} ${request.uri} - body: ${request.body}")
     Monad[F].map(request.send(backend)) { _.body.left.map(e => UnexpectedError(e)) }
 
   private def performToolCalls(
@@ -43,19 +47,24 @@ class OpenAiClient[F[_]: Monad](apiToken: Option[String], val backend: SttpBacke
         } yield chatCompletion
       case _ => EitherT.fromEither[F](Right(response))
 
+  def listModels(): F[Either[ErrorResponse, List[Model]]] =
+
+    val modelsUrl = baseUri.addPath("models")
+    val request   = apiRequest.get(modelsUrl)
+
+    (for {
+      responseBody <- EitherT(sendRequest(request))
+      response     <- EitherT.fromEither[F](decode[ModelListResponse](responseBody)).leftMap(JsonParsingError(_))
+    } yield response.data).value
+
   def chatCompletion(chatRequest: ChatCompletionRequest, toolImplementations: Seq[ToolImplementation[F, ?]] = Nil): F[Either[ErrorResponse, ChatCompletionResponse]] =
 
     val completionUrl    = baseUri.addPath("chat", "completions")
     val jsonBody: String = jsonPrinter.print(chatRequest.asJson)
 
-    logger.debug(s"POST $completionUrl - $jsonBody")
-
-    val headers: Seq[(String, String)] =
-      Seq("Content-Type" -> "application/json") ++ apiToken.map(token => "Authorization" -> s"Bearer $token")
-
-    val request = basicRequest
+    val request = apiRequest
+      .header("Content-Type", "application/json")
       .post(completionUrl)
-      .headers(Map(headers*))
       .body(jsonBody)
 
     (for {
