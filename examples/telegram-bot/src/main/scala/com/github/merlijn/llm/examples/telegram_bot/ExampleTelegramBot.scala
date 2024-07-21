@@ -14,8 +14,6 @@ object ExampleTelegramBot extends IOApp.Simple:
   override val run =
     given ioRuntime: IORuntime = cats.effect.unsafe.IORuntime.global
 
-    val logger = org.slf4j.LoggerFactory.getLogger(getClass)
-
     val llmToken        = sys.env.get("LLM_TOKEN")
     val llmBaseUrl      = sys.env.getOrElse("LLM_BASE_URL", "https://api.openai.com/v1")
     val llmModel        = sys.env.getOrElse("LLM_MODEL", "gpt-3.5-turbo")
@@ -31,8 +29,9 @@ object ExampleTelegramBot extends IOApp.Simple:
       )
       chatStorage = new ChatStorage[IO]()
       telegramBackend <- BlazeClientBuilder[IO].resource
-      api = BotApi(telegramBackend, baseUrl = s"https://api.telegram.org/bot$telegramToken")
-    } yield new ChatBot(api, chatStorage, openAiClient, llmModel, llmSystemPrompt)
+      botApi     = BotApi(telegramBackend, baseUrl = s"https://api.telegram.org/bot$telegramToken")
+      chatConfig = ChatConfig(llmModel, llmSystemPrompt)
+    } yield new ChatBot(botApi, openAiClient, chatConfig, chatStorage)
 
     botResource
       .use(_.start())

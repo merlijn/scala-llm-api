@@ -3,19 +3,34 @@ package com.github.merlijn.llm.examples.telegram_bot
 import cats.{Monad, Parallel}
 import cats.effect.Async
 import com.github.merlijn.llm.api.{OpenAiClient, dto}
-import telegramium.bots.{ChatIntId, Message}
+import telegramium.bots.{ChatIntId, Markdown, Message, ParseMode}
 import telegramium.bots.high.{Api, LongPollBot, Methods}
 import cats.syntax.all.*
 
-class ChatBot[F[_]: Async: Parallel](api: Api[F], chatStorage: ChatStorage[F], llmClient: OpenAiClient[F], llmModel: String, llmSystemPrompt: String) extends LongPollBot[F](api):
+case class ChatConfig(
+  llmModel: String,
+  llmSystemPrompt: String,
+  maxHistory: Int = 100,
+  parseMode: Option[ParseMode] = Markdown.some,
+  temperature: Option[Double] = Some(0.8),
+  max_tokens: Option[Int] = Some(1500)
+)
 
-  private val logger       = org.slf4j.LoggerFactory.getLogger(getClass)
-  private val errorMessage = "An error occurred while processing your request. Please try again later."
-  private val maxHistory   = 100
+class ChatBot[F[_]: Async: Parallel](
+  api: Api[F],
+  llmClient: OpenAiClient[F],
+  chatConfig: ChatConfig,
+  chatStorage: ChatStorage[F]
+) extends LongPollBot[F](api):
 
-  def truncateHistory(history: List[dto.Message]): List[dto.Message] =
-    if history.length > maxHistory then
-      dto.Message.system(llmSystemPrompt) :: history.drop(history.length - maxHistory + 1)
+  private val logger         = org.slf4j.LoggerFactory.getLogger(getClass)
+  private val errorMessage   = "An error occurred while processing your request. Please try again later."
+  private val welcomeMessage = s"Welcome! You are talking to ${chatConfig.llmModel}. Please start chatting :)"
+  private val systemMessage  = dto.Message.system(chatConfig.llmSystemPrompt)
+
+  private def truncateHistory(history: List[dto.Message]): List[dto.Message] =
+    if history.length > chatConfig.maxHistory then
+      dto.Message.system(chatConfig.llmSystemPrompt) :: history.drop(history.length - chatConfig.maxHistory + 1)
     else
       history
 
@@ -23,30 +38,34 @@ class ChatBot[F[_]: Async: Parallel](api: Api[F], chatStorage: ChatStorage[F], l
 
     def getChatHistory(chatId: Long) =
       chatStorage.getMessages(chatId).map:
-        case Nil      => List(dto.Message.system(llmSystemPrompt))
+        case Nil      => List(systemMessage)
         case messages => truncateHistory(messages)
 
-    msg.text match
-      case None => Monad[F].unit
-      case Some(userMessage) =>
-        def reply(history: List[dto.Message], response: String) =
-          api.execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = response)) >>
-            chatStorage.setHistory(msg.chat.id, history ::: List(dto.Message.user(userMessage), dto.Message.assistant(response)))
+    def reply(text: String) =
+      api.execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = text, parseMode = chatConfig.parseMode)).void
 
-        for {
+    msg.text match
+      case None           => Monad[F].unit
+      case Some("/start") => reply(welcomeMessage)
+      case Some(userMessage) =>
+        logger.info(s"Processing message from ${msg.from.map(_.firstName)}")
+
+        for
           chatHistory <- getChatHistory(msg.chat.id)
           chatRequest = dto.ChatCompletionRequest(
-            model = llmModel,
+            model = chatConfig.llmModel,
             messages = chatHistory :+ dto.Message.user(userMessage),
-            temperature = Some(0.8),
-            max_tokens = Some(1500)
+            chatConfig.temperature,
+            chatConfig.max_tokens
           )
-          chatResponse <- llmClient.chatCompletion(chatRequest).flatMap:
+          _ <- llmClient.chatCompletion(chatRequest).flatMap:
             case Right(response) =>
               response.firstMessageContent match
-                case None          => reply(chatHistory, errorMessage)
-                case Some(content) => reply(chatHistory, content)
+                case None => reply(errorMessage)
+                case Some(content) =>
+                  val newHistory = chatHistory ::: List(dto.Message.user(userMessage), dto.Message.assistant(content))
+                  reply(content) >> chatStorage.setHistory(msg.chat.id, newHistory)
             case Left(error) =>
               logger.error(s"LLM Request returned an error: ${error}")
-              reply(chatHistory, errorMessage)
-        } yield ()
+              reply(errorMessage)
+        yield ()
