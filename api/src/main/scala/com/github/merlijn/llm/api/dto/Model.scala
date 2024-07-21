@@ -9,6 +9,7 @@ case class Message(role: String, content: Option[String], tool_call_id: Option[S
 
 case object Message:
   def user(content: String): Message                     = Message("user", Some(content))
+  def assistant(content: String): Message                = Message("assistant", Some(content))
   def system(content: String): Message                   = Message("system", Some(content))
   def tool(toolCallId: String, content: String): Message = Message("tool", Some(content), tool_call_id = Some(toolCallId))
 
