@@ -1,7 +1,7 @@
 package com.github.merlijn.llm.api
 
 import cats.Monad
-import com.github.merlijn.llm.api.dto.{ErrorResponse, JsonParsingError}
+import com.github.merlijn.llm.api
 import io.circe.Decoder
 
 import scala.reflect.ClassTag

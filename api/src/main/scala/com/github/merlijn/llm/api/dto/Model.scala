@@ -1,7 +1,7 @@
 package com.github.merlijn.llm.api.dto
 
 import com.github.merlijn.llm.api.camelToSnake
-import com.github.merlijn.llm.api.schema.{JsonSchemaTag, SchemaType}
+import com.github.merlijn.llm.api.schema.{ConcreteSchemaType, JsonSchemaTag, ReferenceType, SchemaType}
 
 import scala.reflect.ClassTag
 
@@ -40,10 +40,15 @@ case class Tool(
 )
 
 object Tool:
-  def function[T: ClassTag: JsonSchemaTag](description: String): Tool =
-
-    val name = camelToSnake(summon[ClassTag[T]].runtimeClass.getSimpleName)
-    Tool(function = Function(name, description, summon[JsonSchemaTag[T]].schemaType))
+  def function[T: ClassTag: JsonSchemaTag]: Tool =
+    summon[JsonSchemaTag[T]].schemaType match
+      case ReferenceType(ref) =>
+        throw new IllegalArgumentException(s"Cannot create tool for reference type $ref")
+      case concrete: ConcreteSchemaType =>
+        val name = camelToSnake(summon[ClassTag[T]].runtimeClass.getSimpleName)  
+        // todo require a description at compile time
+        val description = concrete.description.getOrElse(name)
+        Tool(function = Function(camelToSnake(summon[ClassTag[T]].runtimeClass.getSimpleName), description, concrete))
 
 case class Function(
   name: String,
@@ -86,12 +91,3 @@ case class FunctionCall(
   name: String,
   arguments: String
 )
-
-sealed trait ErrorResponse:
-  def message: String
-
-case class ToolNotFound(toolName: String) extends ErrorResponse:
-  override def message: String = s"Tool with name $toolName not found"
-case class UnexpectedError(message: String) extends ErrorResponse
-case class JsonParsingError(reason: io.circe.Error) extends ErrorResponse:
-  override def message: String = reason.getMessage

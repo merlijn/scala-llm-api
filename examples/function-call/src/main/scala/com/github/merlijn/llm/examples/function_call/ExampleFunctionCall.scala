@@ -18,7 +18,7 @@ case class GetPackageById(
 
 object ExampleFunctionCall:
 
-  val logger = org.slf4j.LoggerFactory.getLogger(getClass)
+  private val logger = org.slf4j.LoggerFactory.getLogger(getClass)
 
   @main
   def run(): Unit =
@@ -34,7 +34,7 @@ object ExampleFunctionCall:
       baseUri = Uri.parse(llmBaseUrl).getOrElse(throw new IllegalStateException("Invalid base URL"))
     )
 
-    val getPackageById = Tool.function[GetPackageById]("Get the status of a package by it's ID")
+    val getPackageById = Tool.function[GetPackageById]
 
     val function: GetPackageById => Future[String] = getPackageById =>
       Future:

@@ -15,7 +15,7 @@ case class ChatConfig(
   maxHistory: Int = 100,
   parseMode: Option[ParseMode] = Markdown.some,
   temperature: Option[Double] = Some(0.8),
-  max_tokens: Option[Int] = Some(1500)
+  max_tokens: Option[Int] = Some(1000)
 )
 
 class ChatBot[F[_]: Async: Parallel](
