@@ -11,11 +11,10 @@ import sttp.model.Uri
 
 class OpenAiClient[F[_]: Monad](apiToken: Option[String], val backend: SttpBackend[F, ?], val baseUri: Uri = uri"https://api.openai.com/v1"):
 
-  private val logger      = org.slf4j.LoggerFactory.getLogger(getClass)
-  private val jsonPrinter = io.circe.Printer.noSpaces.copy(dropNullValues = true)
-
-  val authenticationHeaders: Seq[(String, String)] = apiToken.map(token => "Authorization" -> s"Bearer $token").toSeq
-  val apiRequest                                   = basicRequest.headers(Map(authenticationHeaders*))
+  private val logger                = org.slf4j.LoggerFactory.getLogger(getClass)
+  private val jsonPrinter           = io.circe.Printer.noSpaces.copy(dropNullValues = true)
+  private val authenticationHeaders = apiToken.map(token => "Authorization" -> s"Bearer $token").toMap
+  private val baseApiRequest        = basicRequest.headers(authenticationHeaders)
 
   private def parseResponse(response: String): Either[ErrorResponse, ChatCompletionResponse] =
     logger.debug(s"Response body - $response")
@@ -50,7 +49,7 @@ class OpenAiClient[F[_]: Monad](apiToken: Option[String], val backend: SttpBacke
   def listModels(): F[Either[ErrorResponse, List[Model]]] =
 
     val modelsUrl = baseUri.addPath("models")
-    val request   = apiRequest.get(modelsUrl)
+    val request   = baseApiRequest.get(modelsUrl)
 
     (for {
       responseBody <- EitherT(sendRequest(request))
@@ -62,7 +61,7 @@ class OpenAiClient[F[_]: Monad](apiToken: Option[String], val backend: SttpBacke
     val completionUrl    = baseUri.addPath("chat", "completions")
     val jsonBody: String = jsonPrinter.print(chatRequest.asJson)
 
-    val request = apiRequest
+    val request = baseApiRequest
       .header("Content-Type", "application/json")
       .post(completionUrl)
       .body(jsonBody)

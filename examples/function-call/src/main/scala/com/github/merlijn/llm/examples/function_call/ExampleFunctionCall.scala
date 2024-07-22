@@ -3,13 +3,13 @@ package com.github.merlijn.llm.examples.function_call
 import com.github.merlijn.llm.api.dto.*
 import com.github.merlijn.llm.api.schema.{Description, JsonSchemaTag}
 import com.github.merlijn.llm.api.{OpenAiClient, ToolImplementation}
-import io.circe.Decoder
+import io.circe.{Decoder, Printer}
 import sttp.client3.HttpClientFutureBackend
 import sttp.model.Uri
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, ExecutionContext, Future}
-import cats.instances.future._
+import cats.instances.future.*
 
 @Description("Returns the status of a package by it's ID")
 case class GetPackageById(

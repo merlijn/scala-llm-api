@@ -25,10 +25,10 @@ object JsonSchemaTag:
   // inline derivation of case classes
   inline final given derived[A](using A: Mirror.Of[A]): JsonSchemaTag[A] =
 
-    val description       = Description.readMetaForType[A]
+    val description       = Annotations.readDescriptionForType[A]
     val childLabels       = summonLabelsRec[A.MirroredElemLabels].toVector
     val childSchemas      = summonSchemasRec[A.MirroredElemTypes].toVector.map(_.schemaType)
-    val childDescriptions = Description.fieldMetaForType[A].toMap
+    val childDescriptions = Annotations.readFieldDescriptions[A].toMap
 
     val properties: Map[String, SchemaType] =
       childLabels

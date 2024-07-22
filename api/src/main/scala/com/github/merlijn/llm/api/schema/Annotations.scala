@@ -4,18 +4,20 @@ import scala.annotation.StaticAnnotation
 
 class Description(val description: String) extends StaticAnnotation
 
-object Description:
+class Title(val title: String) extends StaticAnnotation
+
+object Annotations:
 
   import scala.quoted.*
 
-  inline def fieldMetaForType[T]: Vector[(String, Description)] = ${
-    readFieldMeta[T]
-  }
+  inline def readFieldDescriptions[T]: Vector[(String, Description)] = ${ readFieldAnnotationsImpl[T, Description] }
 
-  private def readFieldMeta[T: Type](using q: Quotes): Expr[Vector[(String, Description)]] =
+  inline def readFieldTitles[T]: Vector[(String, Title)] = ${ readFieldAnnotationsImpl[T, Title] }
+
+  private def readFieldAnnotationsImpl[T: Type, A <: StaticAnnotation: Type](using q: Quotes): Expr[Vector[(String, A)]] =
     import quotes.reflect.*
-    val annot = TypeRepr.of[Description].typeSymbol
-    val tuples: Seq[Expr[(String, Description)]] = TypeRepr
+    val annot = TypeRepr.of[A].typeSymbol
+    val tuples: Seq[Expr[(String, A)]] = TypeRepr
       .of[T]
       .typeSymbol
       .primaryConstructor
@@ -24,22 +26,24 @@ object Description:
       .collect:
         case sym if sym.hasAnnotation(annot) =>
           val fieldNameExpr = Expr(sym.name.asInstanceOf[String])
-          val annotExpr     = sym.getAnnotation(annot).get.asExprOf[Description]
+          val annotExpr     = sym.getAnnotation(annot).get.asExprOf[A]
           '{ ($fieldNameExpr, $annotExpr) }
-    val seq: Expr[Seq[(String, Description)]] = Expr.ofSeq(tuples)
+    val seq: Expr[Seq[(String, A)]] = Expr.ofSeq(tuples)
     '{ $seq.toVector }
 
-  inline def readMetaForType[T]: Option[Description] = ${ readMetaForTypeImpl[T] }
+  inline def readDescriptionForType[T]: Option[Description] = ${ readAnnotationForTypeImpl[T, Description] }
 
-  private def readMetaForTypeImpl[T: Type](using Quotes): Expr[Option[Description]] =
+  inline def readTitleForType[T]: Option[Title] = ${ readAnnotationForTypeImpl[T, Title] }
+
+  private def readAnnotationForTypeImpl[T: Type, A <: StaticAnnotation: Type](using Quotes): Expr[Option[A]] =
     import quotes.reflect.*
-    val annot = TypeRepr.of[Description]
+    val annot = TypeRepr.of[A]
     TypeRepr
       .of[T]
       .typeSymbol
       .annotations
       .collectFirst:
-        case term if term.tpe =:= annot => term.asExprOf[Description]
+        case term if term.tpe =:= annot => term.asExprOf[A]
     match
       case Some(expr) => '{ Some($expr) }
       case None       => '{ None }

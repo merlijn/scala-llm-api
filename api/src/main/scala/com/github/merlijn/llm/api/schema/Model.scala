@@ -36,11 +36,11 @@ object SchemaType:
 
   given referenceCodec: Codec.AsObject[ReferenceType] = deriveCodec[ReferenceType]
 
-  implicit class JsonObjectOps(val base: JsonObject) extends AnyVal:
+  extension (base: JsonObject)
     def addMaybe[T: Encoder](fieldName: String, value: Option[T]): JsonObject =
       value.fold(base)(v => base.add(fieldName, summon[Encoder[T]].apply(v)))
 
-  implicit def concreteSchemaTypeEncoder(using schemaEncoder: Encoder[SchemaType]): Encoder[ConcreteSchemaType] = Encoder.instance { a =>
+  given concreteSchemaTypeEncoder(using schemaEncoder: Encoder[SchemaType]): Encoder[ConcreteSchemaType] = Encoder.instance { a =>
     val base              = JsonObject("type" -> Encoder[JsonType].apply(a.`type`))
     val parametersEncoder = summon[Encoder[Map[String, SchemaType]]]
 
@@ -51,12 +51,13 @@ object SchemaType:
       .addMaybe("title", a.title)
       .addMaybe("description", a.description)
       .addMaybe("properties", a.properties)
+      .addMaybe("required", a.required)
       .toJson
   }
 
-  implicit val schemaTypeDecoder: Decoder[SchemaType] = Decoder.decodeString.emap[SchemaType](str => Right(ReferenceType(str)))
+  given schemaTypeDecoder: Decoder[SchemaType] = Decoder.decodeString.emap[SchemaType](str => Right(ReferenceType(str)))
 
-  implicit val concreteEncoder: Encoder[SchemaType] =
+  given concreteEncoder: Encoder[SchemaType] =
     Encoder.recursive { implicit recurse =>
       Encoder.instance:
         case c: ConcreteSchemaType => concreteSchemaTypeEncoder.apply(c)
