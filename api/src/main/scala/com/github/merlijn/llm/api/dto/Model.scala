@@ -5,7 +5,12 @@ import com.github.merlijn.llm.api.schema.{ConcreteSchemaType, JsonSchemaTag, Ref
 
 import scala.reflect.ClassTag
 
-case class Message(role: String, content: Option[String], tool_call_id: Option[String] = None, tool_calls: Option[List[ToolCall]] = None)
+case class Message(
+  role: String,
+  content: Option[String],
+  tool_call_id: Option[String] = None,
+  tool_calls: Option[List[ToolCall]] = None
+)
 
 case object Message:
   def user(content: String): Message                     = Message("user", Some(content))
@@ -31,7 +36,8 @@ case class ChatCompletionRequest(
   max_tokens: Option[Int] = None,
   n: Option[Int] = None,
   seed: Option[Int] = None,
-  tools: Option[List[Tool]] = None
+  tools: Option[List[Tool]] = None,
+  tool_choice: Option[String] = None
 )
 
 case class Tool(
@@ -45,7 +51,7 @@ object Tool:
       case ReferenceType(ref) =>
         throw new IllegalArgumentException(s"Cannot create tool for reference type $ref")
       case concrete: ConcreteSchemaType =>
-        val name = camelToSnake(summon[ClassTag[T]].runtimeClass.getSimpleName)  
+        val name = camelToSnake(summon[ClassTag[T]].runtimeClass.getSimpleName)
         // todo require a description at compile time
         val description = concrete.description.getOrElse(name)
         Tool(function = Function(camelToSnake(summon[ClassTag[T]].runtimeClass.getSimpleName), description, concrete))

@@ -71,3 +71,7 @@ class OpenAiClient[F[_]: Monad](apiToken: Option[String], val backend: SttpBacke
       chatResponse          <- EitherT.fromEither[F](parseResponse(responseBody))
       responseWithToolCalls <- performToolCalls(chatRequest, chatResponse, toolImplementations)
     } yield responseWithToolCalls).value
+
+object OpenAiClient:
+  def forVendor[F[_]: Monad](vendor: LLMVendor, backend: SttpBackend[F, ?]): OpenAiClient[F] =
+    new OpenAiClient[F](vendor.apiToken, backend, Uri.parse(vendor.baseUrl).getOrElse(throw new IllegalStateException("Invalid base URL")))

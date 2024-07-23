@@ -6,7 +6,7 @@
     </appender>
 
     <logger name="org.http4s" level="WARN" />
-    <logger name="com.github.merlijn" level="INFO" />
+    <logger name="com.github.merlijn" level="DEBUG" />
 
     <root level="INFO">
         <appender-ref ref="STDOUT" />

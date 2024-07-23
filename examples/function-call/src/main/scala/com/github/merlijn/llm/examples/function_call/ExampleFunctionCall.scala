@@ -48,7 +48,7 @@ object ExampleFunctionCall:
       model = llmModel,
       messages = List(
         Message.system("You are an assistant chat bot that helps customers with their questions about their packages"),
-        Message.user("Do you know what the status of my package is? The id is 237293GR")
+        Message.user("Hi there!")
       ),
       tools = Some(List(getPackageById))
     )

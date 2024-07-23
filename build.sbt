@@ -3,6 +3,7 @@ import sbt.project
 val commonSettings = Seq(
   organization := "com.github.merlijn",
   scalaVersion := "3.4.2",
+  scalacOptions := Seq("-rewrite", "-indent")
 )
 
 val circeVersion = "0.14.9"
@@ -21,6 +22,7 @@ lazy val api = project
       "io.circe"  %% "circe-generic"   % circeVersion,
       "io.circe"  %% "circe-parser"    % circeVersion,
       "org.typelevel" %% "cats-core"   % "2.12.0",
+      "com.github.pureconfig" %% "pureconfig-core" % "0.17.7",
     )
   )
 
@@ -38,6 +40,7 @@ lazy val telegramBot = project
       "io.github.apimorphism" %% "telegramium-core" % "9.77.0",
       "io.github.apimorphism" %% "telegramium-high" % "9.77.0",
       "com.softwaremill.sttp.client3" %% "cats" % "3.9.7",
+      "com.github.pureconfig" %% "pureconfig-core" % "0.17.7",
       logback,
     )
   ).dependsOn(api)

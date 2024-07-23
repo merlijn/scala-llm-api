@@ -18,7 +18,7 @@ Note: json schema derivation is very limited and does not support recursive type
 Look in the `examples` directory for example usages:
 
 1. [A simple request response chat](examples/simple-chat/src/main/scala/com/github/merlijn/llm/examples/chat/ExampleSimpleChatResponse.scala)
-2. [A basic Telegram bot](examples/telegram-bot/src/main/scala/com/github/merlijn/llm/examples/telegram_bot/ExampleTelegramBot.scala)
+2. [A basic Telegram bot](examples/telegram-bot/src/main/scala/com/github/merlijn/llm/examples/telegram_bot/ChatBotApp.scala)
 3. [Function calling](examples/function-call/src/main/scala/com/github/merlijn/llm/examples/function_call/ExampleFunctionCall.scala)
 
 Usage:
