@@ -4,13 +4,13 @@ import cats.data.EitherT
 import cats.{Monad, Parallel}
 import cats.effect.Async
 import com.github.merlijn.llm.api.{LLMVendor, OpenAiClient, ToolImplementation, dto}
-import telegramium.bots.{ChatIntId, Markdown, Message, ParseMode}
+import telegramium.bots.{ChatIntId, Markdown, Markdown2, Message, ParseMode}
 import telegramium.bots.high.{Api, LongPollBot, Methods}
 import cats.syntax.all.*
 import sttp.client3.SttpBackend
 
 import scala.collection.immutable.Nil
-import scala.util.{Try, Success, Failure}
+import scala.util.{Failure, Success, Try}
 
 class ChatBot[F[_]: Async: Parallel](
   api: Api[F],
@@ -59,8 +59,10 @@ class ChatBot[F[_]: Async: Parallel](
     def replyF(text: F[String]) =
       text.flatMap(reply)
 
-    def reply(text: String) =
-      api.execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = text, parseMode = Some(Markdown))).void
+    def reply(text: String): F[Unit] =
+      api
+        .execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = text, parseMode = Some(Markdown2)))
+        .void
 
     def replyT(response: EitherT[F, String, String]) =
       response.value.flatMap:
