@@ -20,20 +20,20 @@ class ChatBot[F[_]: Async: Parallel](
 
   private val logger         = org.slf4j.LoggerFactory.getLogger(getClass)
   private val errorMessage   = "An error occurred while processing your request. Please try again later."
-  private val welcomeMessage = s"Welcome! You are talking to ${defaultChatConfig.model} from ${defaultChatConfig.vendorId}. Please start chatting :). Use /help to see available commands."
+  private val welcomeMessage = s"Welcome! Use /help to see available commands or start chatting :)"
   private val systemMessage  = dto.Message.system(defaultChatConfig.systemPrompt)
   private val help =
     """
-      | Available commands:
+      |Available commands:
       |
-      | /state Show the current chat state
-      | /clear Clear the chat history
-      | /sysprompt <prompt> Updates the system prompt.
-      | /models List the models available
-      | /vendors List the vendors available
-      | /set model <model> Switch to a different model
-      | /set vendor <vendor> Switch to a different model
-      | /help Show this help message
+      |/state Show the current chat state
+      |/clear Clear the chat history
+      |/sysprompt <prompt> Updates the system prompt.
+      |/models List the models available
+      |/vendors List the vendors available
+      |/set model <model> Switch to a different model
+      |/set vendor <vendor> Switch to a different model
+      |/help Show this help message
       |""".stripMargin
 
   private def truncateHistory(history: List[dto.Message]): List[dto.Message] =
