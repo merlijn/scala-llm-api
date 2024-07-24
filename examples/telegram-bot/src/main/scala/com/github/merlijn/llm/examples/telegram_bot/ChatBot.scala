@@ -97,7 +97,7 @@ class ChatBot[F[_]: Async: Parallel](
               for
                 chatConfig <- EitherT.right(getChatConfig(msg.chat.id))
                 models     <- EitherT(llmClients(chatConfig.vendorId).listModels()).leftMap(_.message)
-                model      <- EitherT.fromOption[F](models.lift(idx), s"Model index $idx out of range. Must be between 1 and ${models.length}. See /models for available models")
+                model      <- EitherT.fromOption[F](models.lift(idx - 1), s"Model index $idx out of range. Must be between 1 and ${models.length}. See /models for available models")
                 _          <- EitherT.right(chatStorage.storeChatConfig(msg.chat.id, chatConfig.copy(model = model.id)))
               yield s"Now using model: ${model.id}"
 
@@ -118,7 +118,7 @@ class ChatBot[F[_]: Async: Parallel](
           for
             chatConfig <- EitherT.right(getChatConfig(msg.chat.id))
             models     <- EitherT(llmClients(chatConfig.vendorId).listModels()).leftMap(_.message)
-          yield models.map(m => m.id).zipWithIndex.map((id, idx) => s"$idx. $id").mkString("\n").stripLineEnd
+          yield models.map(m => m.id).zipWithIndex.map((id, idx) => s"${idx+1}. $id").mkString("\n").stripLineEnd
 
       case Some("/clear") =>
         replyF:
