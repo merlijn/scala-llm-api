@@ -35,8 +35,8 @@ class ChatBot[F[_]: Async: Parallel](
       |/sysprompt <prompt> Updates the system prompt.
       |/models List the models available
       |/vendors List the vendors available
-      |/set model <idx> Switch to a different model
-      |/set vendor <vendor> Switch to a different model
+      |/use model <idx> Switch to a different model
+      |/use vendor <vendor> Switch to a different model
       |/help Show this help message
       |""".stripMargin
 
@@ -76,7 +76,7 @@ class ChatBot[F[_]: Async: Parallel](
       case Some("/start") => reply(welcomeMessage)
       case Some("/help")  => reply(help)
 
-      case Some(s"/set vendor $vendorId") =>
+      case Some(s"/use vendor $vendorId") =>
         llmVendors.find(_.id == vendorId) match
           case None => reply(s"Vendor $vendorId not found")
           case Some(vendor) =>
@@ -84,11 +84,11 @@ class ChatBot[F[_]: Async: Parallel](
               for
                 chatConfig <- getChatConfig(msg.chat.id)
                 _          <- chatStorage.storeChatConfig(msg.chat.id, chatConfig.copy(vendorId = vendor.id, model = vendor.defaultModel))
-              yield s"Switched to vendor: $vendor"
+              yield s"Switched to vendor: ${vendor.id}"
 
       case Some("/vendors") => reply(llmVendors.map(_.id).mkString("- ", "\n- ", ""))
 
-      case Some(s"/set model $modelIdx") =>
+      case Some(s"/use model $modelIdx") =>
         Try(modelIdx.toInt) match
           case Failure(_)              => reply("Model must be an number. See /models for available models")
           case Success(idx) if idx < 1 => reply(s"Model index $idx out of range. Must be 1 or higher")
