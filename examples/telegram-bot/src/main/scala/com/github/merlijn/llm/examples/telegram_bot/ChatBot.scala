@@ -62,6 +62,7 @@ class ChatBot[F[_]: Async: Parallel](
     def reply(text: String): F[Unit] =
       api
         .execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = text, parseMode = Some(Markdown)))
+        .recoverWith(e => api.execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = text, parseMode = None)))
         .void
 
     def replyT(response: EitherT[F, String, String]) =
@@ -118,7 +119,7 @@ class ChatBot[F[_]: Async: Parallel](
           for
             chatConfig <- EitherT.right(getChatConfig(msg.chat.id))
             models     <- EitherT(llmClients(chatConfig.vendorId).listModels()).leftMap(_.message)
-          yield models.map(m => m.id).zipWithIndex.map((id, idx) => s"${idx+1}. $id").mkString("\n").stripLineEnd
+          yield models.map(m => m.id).zipWithIndex.map((id, idx) => s"${idx + 1}. $id").mkString("\n").stripLineEnd
 
       case Some("/clear") =>
         replyF:
