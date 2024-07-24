@@ -46,7 +46,7 @@ object ChatBotApp extends IOApp.Simple:
       chatStorage = new ChatStorage[IO]()
       telegramBackend <- BlazeClientBuilder[IO].resource
       botApi = BotApi(telegramBackend, baseUrl = s"https://api.telegram.org/bot$telegramToken")
-    } yield new ChatBot(botApi, llmClients, config.defaultChatConfig, chatStorage, Nil)
+    } yield new ChatBot(botApi, llmClientBackend, config.vendors, config.defaultChatConfig, chatStorage, Nil)
 
     botResource
       .use(_.start())

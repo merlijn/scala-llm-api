@@ -3,21 +3,25 @@ package com.github.merlijn.llm.examples.telegram_bot
 import cats.data.EitherT
 import cats.{Monad, Parallel}
 import cats.effect.Async
-import com.github.merlijn.llm.api.{OpenAiClient, ToolImplementation, dto}
+import com.github.merlijn.llm.api.{LLMVendor, OpenAiClient, ToolImplementation, dto}
 import telegramium.bots.{ChatIntId, Markdown, Message, ParseMode}
 import telegramium.bots.high.{Api, LongPollBot, Methods}
 import cats.syntax.all.*
+import sttp.client3.SttpBackend
 
 import scala.collection.immutable.Nil
+import scala.util.{Try, Success, Failure}
 
 class ChatBot[F[_]: Async: Parallel](
   api: Api[F],
-  llmClients: Map[String, OpenAiClient[F]],
+  sttpBackend: SttpBackend[F, ?],
+  llmVendors: List[LLMVendor],
   defaultChatConfig: ChatConfig,
   chatStorage: ChatStorage[F],
   tools: List[ToolImplementation[F, ?]]
 ) extends LongPollBot[F](api):
 
+  private val llmClients     = llmVendors.map(vendor => vendor.id -> OpenAiClient.forVendor[F](vendor, sttpBackend)).toMap
   private val logger         = org.slf4j.LoggerFactory.getLogger(getClass)
   private val errorMessage   = "An error occurred while processing your request. Please try again later."
   private val welcomeMessage = s"Welcome! Use /help to see available commands or start chatting :)"
@@ -31,7 +35,7 @@ class ChatBot[F[_]: Async: Parallel](
       |/sysprompt <prompt> Updates the system prompt.
       |/models List the models available
       |/vendors List the vendors available
-      |/set model <model> Switch to a different model
+      |/set model <idx> Switch to a different model
       |/set vendor <vendor> Switch to a different model
       |/help Show this help message
       |""".stripMargin
@@ -69,26 +73,31 @@ class ChatBot[F[_]: Async: Parallel](
         Monad[F].unit
       case Some("/start") => reply(welcomeMessage)
       case Some("/help")  => reply(help)
-      case Some(s"/set vendor $vendor") =>
-        if llmClients.contains(vendor) then
-          for
-            chatConfig <- getChatConfig(msg.chat.id)
-            _          <- chatStorage.storeChatConfig(msg.chat.id, chatConfig.copy(vendorId = vendor))
-            _          <- reply(s"Switched to vendor: $vendor")
-          yield ()
-        else
-          reply(s"Vendor $vendor not found")
 
-      case Some("/vendors") => reply(llmClients.keys.mkString("- ", "\n- ", ""))
+      case Some(s"/set vendor $vendorId") =>
+        llmVendors.find(_.id == vendorId) match
+          case None => reply(s"Vendor $vendorId not found")
+          case Some(vendor) =>
+            replyF:
+              for
+                chatConfig <- getChatConfig(msg.chat.id)
+                _          <- chatStorage.storeChatConfig(msg.chat.id, chatConfig.copy(vendorId = vendor.id, model = vendor.defaultModel))
+              yield s"Switched to vendor: $vendor"
 
-      case Some(s"/set model $model") =>
-        replyT:
-          for
-            chatConfig <- EitherT.right(getChatConfig(msg.chat.id))
-            models     <- EitherT(llmClients(chatConfig.vendorId).listModels()).leftMap(_.message)
-            _          <- EitherT.cond(models.exists(_.id == model), (), "Model not found")
-            _          <- EitherT.right(chatStorage.storeChatConfig(msg.chat.id, chatConfig.copy(model = model)))
-          yield s"Now using model: $model"
+      case Some("/vendors") => reply(llmVendors.map(_.id).mkString("- ", "\n- ", ""))
+
+      case Some(s"/set model $modelIdx") =>
+        Try(modelIdx.toInt) match
+          case Failure(_)              => reply("Model must be an number. See /models for available models")
+          case Success(idx) if idx < 1 => reply(s"Model index $idx out of range. Must be 1 or higher")
+          case Success(idx) =>
+            replyT:
+              for
+                chatConfig <- EitherT.right(getChatConfig(msg.chat.id))
+                models     <- EitherT(llmClients(chatConfig.vendorId).listModels()).leftMap(_.message)
+                model      <- EitherT.fromOption[F](models.lift(idx), s"Model index $idx out of range. Must be between 1 and ${models.length}. See /models for available models")
+                _          <- EitherT.right(chatStorage.storeChatConfig(msg.chat.id, chatConfig.copy(model = model.id)))
+              yield s"Now using model: ${model.id}"
 
       case Some("/state") =>
         replyF:
@@ -107,7 +116,7 @@ class ChatBot[F[_]: Async: Parallel](
           for
             chatConfig <- EitherT.right(getChatConfig(msg.chat.id))
             models     <- EitherT(llmClients(chatConfig.vendorId).listModels()).leftMap(_.message)
-          yield models.map(m => m.id).mkString("- ", "\n- ", "")
+          yield models.map(m => m.id).zipWithIndex.map((id, idx) => s"$idx. $id").mkString("\n").stripLineEnd
 
       case Some("/clear") =>
         replyF:
