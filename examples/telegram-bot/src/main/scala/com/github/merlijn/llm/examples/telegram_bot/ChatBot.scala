@@ -26,10 +26,14 @@ class ChatBot[F[_]: Async: Parallel](
     """
       | Available commands:
       |
-      | /list List the models available
-      | /use <model> Switch to a different model
+      | /state Show the current chat state
+      | /clear Clear the chat history
+      | /sysprompt <prompt> Updates the system prompt.
+      | /models List the models available
       | /vendors List the vendors available
-      | /vendor <vendor> Switch to a different vendor
+      | /set model <model> Switch to a different model
+      | /set vendor <vendor> Switch to a different model
+      | /help Show this help message
       |""".stripMargin
 
   private def truncateHistory(history: List[dto.Message]): List[dto.Message] =
@@ -48,10 +52,13 @@ class ChatBot[F[_]: Async: Parallel](
         case Nil      => List(systemMessage)
         case messages => truncateHistory(messages)
 
+    def replyF(text: F[String]) =
+      text.flatMap(reply)
+
     def reply(text: String) =
       api.execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = text, parseMode = Some(Markdown))).void
 
-    def replyWith(response: EitherT[F, String, String]) =
+    def replyT(response: EitherT[F, String, String]) =
       response.value.flatMap:
         case Left(error)    => reply(s"Exception processing request: $error")
         case Right(success) => reply(success)
@@ -62,7 +69,7 @@ class ChatBot[F[_]: Async: Parallel](
         Monad[F].unit
       case Some("/start") => reply(welcomeMessage)
       case Some("/help")  => reply(help)
-      case Some(s"/vendor $vendor") =>
+      case Some(s"/set vendor $vendor") =>
         if llmClients.contains(vendor) then
           for
             chatConfig <- getChatConfig(msg.chat.id)
@@ -73,8 +80,9 @@ class ChatBot[F[_]: Async: Parallel](
           reply(s"Vendor $vendor not found")
 
       case Some("/vendors") => reply(llmClients.keys.mkString("- ", "\n- ", ""))
-      case Some(s"/use $model") =>
-        val result =
+
+      case Some(s"/set model $model") =>
+        replyT:
           for
             chatConfig <- EitherT.right(getChatConfig(msg.chat.id))
             models     <- EitherT(llmClients(chatConfig.vendorId).listModels()).leftMap(_.message)
@@ -82,16 +90,39 @@ class ChatBot[F[_]: Async: Parallel](
             _          <- EitherT.right(chatStorage.storeChatConfig(msg.chat.id, chatConfig.copy(model = model)))
           yield s"Now using model: $model"
 
-        replyWith(result)
+      case Some("/state") =>
+        replyF:
+          for
+            chatConfig  <- getChatConfig(msg.chat.id)
+            chatHistory <- getChatHistory(msg.chat.id)
+          yield s"""
+                |Vendor: ${chatConfig.vendorId}
+                |Model: ${chatConfig.model}
+                |System Prompt: ${chatConfig.systemPrompt}
+                |History: ${chatHistory.length - 1} messages
+                |""".stripMargin
 
-      case Some("/list") =>
-        val result =
+      case Some("/models") =>
+        replyT:
           for
             chatConfig <- EitherT.right(getChatConfig(msg.chat.id))
             models     <- EitherT(llmClients(chatConfig.vendorId).listModels()).leftMap(_.message)
           yield models.map(m => m.id).mkString("- ", "\n- ", "")
 
-        replyWith(result)
+      case Some("/clear") =>
+        replyF:
+          for
+            chatConfig <- getChatConfig(msg.chat.id)
+            _          <- chatStorage.setHistory(msg.chat.id, List(dto.Message.system(chatConfig.systemPrompt)))
+          yield "Chat history cleared"
+
+      case Some(s"/sysprompt $prompt") =>
+        replyF:
+          for
+            chatConfig  <- getChatConfig(msg.chat.id)
+            chatHistory <- getChatHistory(msg.chat.id)
+            _           <- chatStorage.setHistory(msg.chat.id, dto.Message.system(prompt) :: chatHistory.tail)
+          yield "System prompt updated"
 
       case Some(userMessage) =>
         logger.info(s"Processing message from ${msg.from.map(_.firstName)}")

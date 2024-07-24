@@ -16,8 +16,8 @@ class ToolImplementation[F[_]: Monad, T: Decoder](val name: String, val function
 
 object ToolImplementation:
 
-  def fromFunction[F[_]: Monad, T: Decoder: ClassTag : JsonSchemaTag](function: T => F[String]): ToolImplementation[F, T] =
+  def fromFunction[F[_]: Monad, T: Decoder: ClassTag: JsonSchemaTag](function: T => F[String]): ToolImplementation[F, T] =
 
     val functionName = camelToSnake(summon[ClassTag[T]].runtimeClass.getSimpleName)
-    val spec = Tool.function[T]
+    val spec         = Tool.function[T]
     new ToolImplementation[F, T](functionName, function, spec)
