@@ -1,13 +1,13 @@
 package com.github.merlijn.llm.examples.telegram_bot
 
 import cats.data.EitherT
-import cats.{Monad, Parallel}
 import cats.effect.Async
-import com.github.merlijn.llm.api.{LLMVendor, OpenAiClient, ToolImplementation, dto}
-import telegramium.bots.{ChatIntId, Markdown, Markdown2, Message, ParseMode}
-import telegramium.bots.high.{Api, LongPollBot, Methods}
 import cats.syntax.all.*
+import cats.{Monad, Parallel}
+import com.github.merlijn.llm.api.{LLMVendor, OpenAiClient, ToolImplementation, dto}
 import sttp.client3.SttpBackend
+import telegramium.bots.high.{Api, LongPollBot, Methods}
+import telegramium.bots.{ChatIntId, Markdown, Message}
 
 import scala.collection.immutable.Nil
 import scala.util.{Failure, Success, Try}
@@ -61,7 +61,7 @@ class ChatBot[F[_]: Async: Parallel](
 
     def reply(text: String): F[Unit] =
       api
-        .execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = text, parseMode = Some(Markdown2)))
+        .execute(Methods.sendMessage(chatId = ChatIntId(msg.chat.id), text = text, parseMode = Some(Markdown)))
         .void
 
     def replyT(response: EitherT[F, String, String]) =
