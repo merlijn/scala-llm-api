@@ -9,7 +9,6 @@ I recommend copy/pasting the code into your own project and modifying it to suit
 Dependencies are: 
 - [Circe](https://circe.github.io/circe/) for JSON encoding/decoding
 - [STTP](https://sttp.softwaremill.com/en/latest/) for doing HTTP requests
-- [Telegramium](https://github.com/apimorphism/telegramium) for the Telegram bot API
 
 These could be replaced with other libraries relatively easily.
 
@@ -18,8 +17,8 @@ Note: json schema derivation is very limited and does not support recursive type
 Look in the `examples` directory for example usages:
 
 1. [A simple request response chat](examples/simple-chat/src/main/scala/com/github/merlijn/llm/examples/chat/ExampleSimpleChatResponse.scala)
-2. [A basic Telegram bot](examples/telegram-bot/src/main/scala/com/github/merlijn/llm/examples/telegram_bot/ChatBotApp.scala)
 3. [Function calling](examples/function-call/src/main/scala/com/github/merlijn/llm/examples/function_call/ExampleFunctionCall.scala)
+2. [A basic Telegram bot](examples/telegram-bot/src/main/scala/com/github/merlijn/llm/examples/telegram_bot/ChatBotApp.scala) (Uses [Telegramium](https://github.com/apimorphism/telegramium) for the Telegram bot API)
 
 Usage:
 

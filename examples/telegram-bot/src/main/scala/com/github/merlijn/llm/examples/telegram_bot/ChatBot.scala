@@ -33,6 +33,7 @@ class ChatBot[F[_]: Async: Parallel](
       |/state Show the current chat state
       |/clear Clear the chat history
       |/sysprompt <prompt> Updates the system prompt.
+      |/temp <temperature> Set the temperature for the LLM
       |/models List the models available
       |/vendors List the vendors available
       |/use model <idx> Switch to a different model
@@ -69,6 +70,13 @@ class ChatBot[F[_]: Async: Parallel](
       response.value.flatMap:
         case Left(error)    => reply(s"Exception processing request: $error")
         case Right(success) => reply(success)
+
+    def setTemperature(t: Option[Double]) =
+      replyF:
+        for
+          chatConfig <- getChatConfig(msg.chat.id)
+          _          <- chatStorage.storeChatConfig(msg.chat.id, chatConfig.copy(temperature = t))
+        yield s"Temperature set to $t"
 
     msg.text match
       case None =>
@@ -128,13 +136,25 @@ class ChatBot[F[_]: Async: Parallel](
             _          <- chatStorage.setHistory(msg.chat.id, List(dto.Message.system(chatConfig.systemPrompt)))
           yield "Chat history cleared"
 
+      case Some("/temp none") =>
+        setTemperature(None)
+
+      case Some(s"/temp $temp") =>
+        Try(temp.toDouble) match
+          case Failure(_)                     => reply("Temperature must be a number")
+          case Success(t) if t < 0.1 || t > 1 => reply("Temperature must be between 0.1 and 1")
+          case Success(t)                     => setTemperature(Some(t))
+
       case Some(s"/sysprompt $prompt") =>
         replyF:
           for
             chatConfig  <- getChatConfig(msg.chat.id)
             chatHistory <- getChatHistory(msg.chat.id)
-            _           <- chatStorage.setHistory(msg.chat.id, dto.Message.system(prompt) :: chatHistory.tail)
-          yield "System prompt updated"
+            _           <- chatStorage.storeChatConfig(msg.chat.id, chatConfig.copy(systemPrompt = prompt))
+          yield "System prompt updated, to use this prompt you need to /clear the chat history."
+
+      case Some(s"/$other") =>
+        reply(s"Unknown command: $other")
 
       case Some(userMessage) =>
         logger.info(s"Processing message from ${msg.from.map(_.firstName)}")

@@ -14,7 +14,7 @@ case class ChatConfig(
   model: String,
   systemPrompt: String,
   maxHistory: Int = 100,
-  temperature: Option[Double] = Some(0.8),
+  temperature: Option[Double] = None,
   maxTokens: Option[Int] = Some(1000)
 ) derives ConfigReader
 
