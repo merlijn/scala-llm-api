@@ -1,23 +1,27 @@
 package com.github.merlijn.llm.examples.chat
 
-import com.github.merlijn.llm.api._
+import com.github.merlijn.llm.api.*
 import com.github.merlijn.llm.api.dto.{ChatCompletionRequest, Message}
+import pureconfig.ConfigSource
 import sttp.client3.HttpClientSyncBackend
-import sttp.model.Uri
 
 object ExampleSimpleChatResponse extends App:
 
   val logger = org.slf4j.LoggerFactory.getLogger(getClass)
 
-  val llmToken: Option[String] = sys.env.get("LLM_TOKEN")
-  val llmBaseUrl: String       = sys.env.getOrElse("LLM_BASE_URL", "https://api.openai.com/v1")
-  val llmModel: String         = sys.env.getOrElse("LLM_MODEL", "gpt-3.5-turbo")
+  def requireEnv(name: String): String =
+    sys.env.getOrElse(name, throw new IllegalStateException(s"Environment variable $name not set"))
 
-  val openAiClient = new OpenAiClient(
-    apiToken = llmToken,
-    backend = HttpClientSyncBackend(),
-    baseUri = Uri.parse(llmBaseUrl).getOrElse(throw new IllegalStateException("Invalid base URL"))
-  )
+  val llmModel: String    = requireEnv("DEFAULT_CHAT_MODEL")
+  val llmVendorId: String = requireEnv("DEFAULT_CHAT_VENDOR")
+
+  val vendors = ConfigSource.default.at("vendors").load[List[LLMVendor]] match
+    case Left(error)  => throw new IllegalStateException(s"Failed to load config: $error")
+    case Right(value) => value
+
+  val llmVendor = vendors.find(_.id == llmVendorId).getOrElse(throw new IllegalStateException(s"Vendor $llmVendorId not found"))
+
+  val openAiClient = OpenAiClient.forVendor(llmVendor, HttpClientSyncBackend())
 
   val chatRequest = ChatCompletionRequest(
     model = llmModel,

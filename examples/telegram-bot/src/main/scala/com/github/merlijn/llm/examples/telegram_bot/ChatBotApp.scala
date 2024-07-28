@@ -2,21 +2,12 @@ package com.github.merlijn.llm.examples.telegram_bot
 
 import cats.effect.unsafe.IORuntime
 import cats.effect.{IO, IOApp}
-import com.github.merlijn.llm.api.{LLMVendor, OpenAiClient}
+import com.github.merlijn.llm.api.{ChatConfig, LLMVendor, OpenAiClient}
 import org.http4s.blaze.client.BlazeClientBuilder
 import pureconfig.*
 import pureconfig.generic.derivation.default.*
 import sttp.client3.httpclient.cats.HttpClientCatsBackend
 import telegramium.bots.high.*
-
-case class ChatConfig(
-  vendorId: String,
-  model: String,
-  systemPrompt: String,
-  maxHistory: Int = 100,
-  temperature: Option[Double] = None,
-  maxTokens: Option[Int] = Some(1000)
-) derives ConfigReader
 
 case class ChatBotAppConfig(
   vendors: List[LLMVendor],

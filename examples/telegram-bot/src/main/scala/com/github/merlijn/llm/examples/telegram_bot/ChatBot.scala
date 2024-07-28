@@ -4,7 +4,7 @@ import cats.data.EitherT
 import cats.effect.Async
 import cats.syntax.all.*
 import cats.{Monad, Parallel}
-import com.github.merlijn.llm.api.{LLMVendor, OpenAiClient, ToolImplementation, dto}
+import com.github.merlijn.llm.api.{ChatConfig, LLMVendor, OpenAiClient, ToolImplementation, dto}
 import sttp.client3.SttpBackend
 import telegramium.bots.high.{Api, LongPollBot, Methods}
 import telegramium.bots.{ChatIntId, Markdown, Message}

@@ -2,7 +2,7 @@ package com.github.merlijn.llm.examples.function_call
 
 import com.github.merlijn.llm.api.dto.*
 import com.github.merlijn.llm.api.schema.{Description, JsonSchemaTag}
-import com.github.merlijn.llm.api.{OpenAiClient, ToolImplementation}
+import com.github.merlijn.llm.api.{LLMVendor, OpenAiClient, ToolImplementation}
 import io.circe.{Decoder, Printer}
 import sttp.client3.HttpClientFutureBackend
 import sttp.model.Uri
@@ -10,6 +10,7 @@ import sttp.model.Uri
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, ExecutionContext, Future}
 import cats.instances.future.*
+import pureconfig.ConfigSource
 
 @Description("Returns the status of a package by it's ID")
 case class GetPackageById(
@@ -24,15 +25,19 @@ object ExampleFunctionCall:
   def run(): Unit =
     given ec: ExecutionContext = scala.concurrent.ExecutionContext.global
 
-    val llmToken   = sys.env.get("LLM_TOKEN")
-    val llmBaseUrl = sys.env.getOrElse("LLM_BASE_URL", "https://api.openai.com/v1")
-    val llmModel   = sys.env.getOrElse("LLM_MODEL", "gpt-4o")
+    def requireEnv(name: String): String =
+      sys.env.getOrElse(name, throw new IllegalStateException(s"Environment variable $name not set"))
 
-    val openAiClient = new OpenAiClient(
-      apiToken = llmToken,
-      backend = HttpClientFutureBackend(),
-      baseUri = Uri.parse(llmBaseUrl).getOrElse(throw new IllegalStateException("Invalid base URL"))
-    )
+    val llmModel: String    = requireEnv("DEFAULT_CHAT_MODEL")
+    val llmVendorId: String = requireEnv("DEFAULT_CHAT_VENDOR")
+
+    val vendors = ConfigSource.default.at("vendors").load[List[LLMVendor]] match
+      case Left(error)  => throw new IllegalStateException(s"Failed to load config: $error")
+      case Right(value) => value
+
+    val llmVendor = vendors.find(_.id == llmVendorId).getOrElse(throw new IllegalStateException(s"Vendor $llmVendorId not found"))
+
+    val openAiClient = OpenAiClient.forVendor(llmVendor, HttpClientFutureBackend())
 
     val getPackageById = Tool.function[GetPackageById]
 

@@ -1,6 +1,7 @@
 package com.github.merlijn.llm.examples.telegram_bot
 
 import cats.Monad
+import com.github.merlijn.llm.api.ChatConfig
 import com.github.merlijn.llm.api.dto.Message
 
 class ChatStorage[F[_]: Monad](initialState: Map[Long, List[Message]] = Map.empty):
