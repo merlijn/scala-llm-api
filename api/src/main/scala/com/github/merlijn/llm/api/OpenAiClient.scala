@@ -2,27 +2,30 @@ package com.github.merlijn.llm.api
 
 import cats.{Monad, Traverse}
 import cats.data.EitherT
+import cats.effect.Concurrent
 import com.github.merlijn.llm.api.dto.CirceCodecs.given
-import com.github.merlijn.llm.api.dto._
+import com.github.merlijn.llm.api.dto.*
 import io.circe.parser.decode
-import io.circe.syntax._
-import sttp.client3.{Identity, RequestT, SttpBackend, UriContext, basicRequest}
-import sttp.model.Uri
+import io.circe.syntax.*
+import org.http4s.{Header, Headers, Method, Request, Uri}
+import org.http4s.client.Client
+import org.http4s.implicits.*
+import org.typelevel.ci.CIStringSyntax
 
-class OpenAiClient[F[_]: Monad](apiToken: Option[String], val backend: SttpBackend[F, ?], val baseUri: Uri = uri"https://api.openai.com/v1"):
+class OpenAiClient[F[_]: Monad: Concurrent](apiToken: Option[String], val backend: Client[F], val baseUri: Uri = uri"https://api.openai.com/v1"):
 
   private val logger                = org.slf4j.LoggerFactory.getLogger(getClass)
   private val jsonPrinter           = io.circe.Printer.noSpaces.copy(dropNullValues = true)
-  private val authenticationHeaders = apiToken.map(token => "Authorization" -> s"Bearer $token").toMap
-  private val baseApiRequest        = basicRequest.headers(authenticationHeaders)
+  private val authenticationHeaders = apiToken.map(token => Header.Raw(ci"Authorization", s"Bearer $token")).toList
+  private val baseApiRequest        = Request[F](headers = Headers(authenticationHeaders))
 
   private def parseResponse(response: String): Either[ErrorResponse, ChatCompletionResponse] =
     logger.debug(s"Response body - $response")
     decode[ChatCompletionResponse](response).left.map(JsonParsingError(_))
 
-  private def sendRequest(request: RequestT[Identity, Either[String, String], Any]): F[Either[ErrorResponse, String]] =
+  private def sendRequest(request: Request[F]): F[String] =
     logger.debug(s"Sending request - ${request.method} ${request.uri} - body: ${request.body}")
-    Monad[F].map(request.send(backend)) { _.body.left.map(e => UnexpectedError(e)) }
+    backend.expect[String](request)
 
   private def performToolCalls(
     chatRequest: ChatCompletionRequest,
@@ -48,30 +51,31 @@ class OpenAiClient[F[_]: Monad](apiToken: Option[String], val backend: SttpBacke
 
   def listModels(): F[Either[ErrorResponse, List[Model]]] =
 
-    val modelsUrl = baseUri.addPath("models")
-    val request   = baseApiRequest.get(modelsUrl)
+    val modelsUrl = baseUri / "models"
+    val request = baseApiRequest
+      .withMethod(Method.GET)
+      .withUri(modelsUrl)
 
-    (for {
-      responseBody <- EitherT(sendRequest(request))
-      response     <- EitherT.fromEither[F](decode[ModelListResponse](responseBody)).leftMap(JsonParsingError(_))
-    } yield response.data).value
+    Monad[F].map(backend.expect[String](request)) { response =>
+      decode[ModelListResponse](response).map(_.data).left.map(JsonParsingError(_))
+    }
 
   def chatCompletion(chatRequest: ChatCompletionRequest, toolImplementations: Seq[ToolImplementation[F, ?]] = Nil): F[Either[ErrorResponse, ChatCompletionResponse]] =
 
-    val completionUrl    = baseUri.addPath("chat", "completions")
     val jsonBody: String = jsonPrinter.print(chatRequest.asJson)
 
     val request = baseApiRequest
-      .header("Content-Type", "application/json")
-      .post(completionUrl)
-      .body(jsonBody)
+      .withMethod(Method.POST)
+      .withUri(baseUri / "chat" / "completions")
+      .withEntity(jsonBody)
+      .withHeaders(Headers(authenticationHeaders) ++ Headers(Header.Raw(ci"Content-Type", "application/json")))
 
     (for {
-      responseBody          <- EitherT(sendRequest(request))
+      responseBody          <- EitherT.right(sendRequest(request))
       chatResponse          <- EitherT.fromEither[F](parseResponse(responseBody))
       responseWithToolCalls <- performToolCalls(chatRequest, chatResponse, toolImplementations)
     } yield responseWithToolCalls).value
 
 object OpenAiClient:
-  def forVendor[F[_]: Monad](vendor: LLMVendor, backend: SttpBackend[F, ?]): OpenAiClient[F] =
-    new OpenAiClient[F](vendor.apiToken, backend, Uri.parse(vendor.baseUrl).getOrElse(throw new IllegalStateException("Invalid base URL")))
+  def forVendor[F[_]: Monad: Concurrent](vendor: LLMVendor, backend: Client[F]): OpenAiClient[F] =
+    new OpenAiClient[F](vendor.apiToken, backend, Uri.fromString(vendor.baseUrl).getOrElse(throw new IllegalStateException("Invalid base URL")))

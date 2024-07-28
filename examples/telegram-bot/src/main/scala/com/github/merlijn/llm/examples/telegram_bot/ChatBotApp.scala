@@ -1,12 +1,10 @@
 package com.github.merlijn.llm.examples.telegram_bot
 
-import cats.effect.unsafe.IORuntime
 import cats.effect.{IO, IOApp}
 import com.github.merlijn.llm.api.{ChatConfig, LLMVendor, OpenAiClient}
 import org.http4s.blaze.client.BlazeClientBuilder
 import pureconfig.*
 import pureconfig.generic.derivation.default.*
-import sttp.client3.httpclient.cats.HttpClientCatsBackend
 import telegramium.bots.high.*
 
 case class ChatBotAppConfig(
@@ -20,7 +18,6 @@ object ChatBotApp extends IOApp.Simple:
   val logger = org.slf4j.LoggerFactory.getLogger(getClass)
 
   override val run =
-    given ioRuntime: IORuntime = cats.effect.unsafe.IORuntime.global
 
     val config = ConfigSource.default.load[ChatBotAppConfig] match
       case Left(error)  => throw new IllegalStateException(s"Failed to load config: $error")
@@ -32,12 +29,11 @@ object ChatBotApp extends IOApp.Simple:
     val telegramToken = sys.env.getOrElse("TELEGRAM_BOT_TOKEN", throw new IllegalStateException("TELEGRAM_BOT_TOKEN env variable not set"))
 
     val botResource = for {
-      llmClientBackend <- HttpClientCatsBackend.resource[IO]()
-      llmClients  = config.validVendors.map(vendor => vendor.id -> OpenAiClient.forVendor[IO](vendor, llmClientBackend)).toMap
+      httpClient <- BlazeClientBuilder[IO].resource
+      llmClients  = config.validVendors.map(vendor => vendor.id -> OpenAiClient.forVendor[IO](vendor, httpClient)).toMap
       chatStorage = new ChatStorage[IO]()
-      telegramBackend <- BlazeClientBuilder[IO].resource
-      botApi = BotApi(telegramBackend, baseUrl = s"https://api.telegram.org/bot$telegramToken")
-    } yield new ChatBot(botApi, llmClientBackend, config.validVendors, config.defaultChatConfig, chatStorage, Nil)
+      botApi      = BotApi(httpClient, baseUrl = s"https://api.telegram.org/bot$telegramToken")
+    } yield new ChatBot(botApi, httpClient, config.validVendors, config.defaultChatConfig, chatStorage, Nil)
 
     botResource
       .use(_.start())

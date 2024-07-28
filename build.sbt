@@ -8,6 +8,7 @@ val commonSettings = Seq(
 
 val circeVersion = "0.14.9"
 val logback = "ch.qos.logback" % "logback-classic" % "1.5.6"
+val http4sVersion = "0.23.27"
 
 lazy val api = project
   .in(file("api"))
@@ -17,12 +18,14 @@ lazy val api = project
 
     libraryDependencies ++= Seq(
       "org.slf4j" % "slf4j-api" % "2.0.12",
-      "com.softwaremill.sttp.client3" %% "core" % "3.9.7",
       "io.circe"  %% "circe-core"     % circeVersion,
       "io.circe"  %% "circe-generic"   % circeVersion,
       "io.circe"  %% "circe-parser"    % circeVersion,
       "org.typelevel" %% "cats-core"   % "2.12.0",
+      "org.http4s" %% "http4s-dsl"          % http4sVersion,
+      "org.http4s" %% "http4s-client"       % http4sVersion,
       "com.github.pureconfig" %% "pureconfig-core" % "0.17.7",
+      "co.fs2" %% "fs2-core" % "3.10.2",
     )
   )
 
@@ -39,7 +42,6 @@ lazy val telegramBot = project
     libraryDependencies ++= Seq(
       "io.github.apimorphism" %% "telegramium-core" % "9.77.0",
       "io.github.apimorphism" %% "telegramium-high" % "9.77.0",
-      "com.softwaremill.sttp.client3" %% "cats" % "3.9.7",
       "com.github.pureconfig" %% "pureconfig-core" % "0.17.7",
       logback,
     )
@@ -55,7 +57,7 @@ lazy val simpleChat = project
     version := "0.1.0-SNAPSHOT",
     libraryDependencies ++= Seq(
       logback,
-      "com.softwaremill.sttp.client3" %% "async-http-client-backend-future" % "3.9.7",
+      "org.http4s" %% "http4s-ember-client" % http4sVersion,
     )
   ).dependsOn(api)
 
@@ -68,6 +70,6 @@ lazy val functionCall = project
     Compile / resourceDirectory := sharedResources,
     libraryDependencies ++= Seq(
       logback,
-      "com.softwaremill.sttp.client3" %% "async-http-client-backend-future" % "3.9.7",
+      "org.http4s" %% "http4s-ember-client" % http4sVersion,
     )
   ).dependsOn(api)

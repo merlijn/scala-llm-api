@@ -8,7 +8,7 @@ I recommend copy/pasting the code into your own project and modifying it to suit
 
 Dependencies are: 
 - [Circe](https://circe.github.io/circe/) for JSON encoding/decoding
-- [STTP](https://sttp.softwaremill.com/en/latest/) for doing HTTP requests
+- [HTTP4S](https://http4s.org/) for doing HTTP requests
 
 These could be replaced with other libraries relatively easily.
 

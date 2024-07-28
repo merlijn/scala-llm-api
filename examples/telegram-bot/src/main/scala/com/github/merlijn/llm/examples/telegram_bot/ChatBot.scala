@@ -5,7 +5,7 @@ import cats.effect.Async
 import cats.syntax.all.*
 import cats.{Monad, Parallel}
 import com.github.merlijn.llm.api.{ChatConfig, LLMVendor, OpenAiClient, ToolImplementation, dto}
-import sttp.client3.SttpBackend
+import org.http4s.client.Client
 import telegramium.bots.high.{Api, LongPollBot, Methods}
 import telegramium.bots.{ChatIntId, Markdown, Message}
 
@@ -14,14 +14,14 @@ import scala.util.{Failure, Success, Try}
 
 class ChatBot[F[_]: Async: Parallel](
   api: Api[F],
-  sttpBackend: SttpBackend[F, ?],
+  httpClient: Client[F],
   llmVendors: List[LLMVendor],
   defaultChatConfig: ChatConfig,
   chatStorage: ChatStorage[F],
   tools: List[ToolImplementation[F, ?]]
 ) extends LongPollBot[F](api):
 
-  private val llmClients     = llmVendors.map(vendor => vendor.id -> OpenAiClient.forVendor[F](vendor, sttpBackend)).toMap
+  private val llmClients     = llmVendors.map(vendor => vendor.id -> OpenAiClient.forVendor[F](vendor, httpClient)).toMap
   private val logger         = org.slf4j.LoggerFactory.getLogger(getClass)
   private val errorMessage   = "An error occurred while processing your request. Please try again later."
   private val welcomeMessage = s"Welcome! Use /help to see available commands or start chatting :)"
