@@ -1,16 +1,21 @@
 package com.github.merlijn.llm.api
 
-import cats.{Monad, Traverse}
 import cats.data.EitherT
 import cats.effect.Concurrent
-import com.github.merlijn.llm.api.dto.CirceCodecs.given
+import cats.{Monad, Traverse}
 import com.github.merlijn.llm.api.dto.*
+import com.github.merlijn.llm.api.dto.CirceCodecs.given
+import fs2.Stream
+import io.circe.Json
 import io.circe.parser.decode
 import io.circe.syntax.*
-import org.http4s.{Header, Headers, Method, Request, Uri}
 import org.http4s.client.Client
 import org.http4s.implicits.*
+import org.http4s.{Header, Headers, Method, Request, Uri}
 import org.typelevel.ci.CIStringSyntax
+import org.typelevel.jawn.Facade
+
+import java.nio.charset.StandardCharsets
 
 class OpenAiClient[F[_]: Monad: Concurrent](apiToken: Option[String], val backend: Client[F], val baseUri: Uri = uri"https://api.openai.com/v1"):
 
@@ -18,6 +23,8 @@ class OpenAiClient[F[_]: Monad: Concurrent](apiToken: Option[String], val backen
   private val jsonPrinter           = io.circe.Printer.noSpaces.copy(dropNullValues = true)
   private val authenticationHeaders = apiToken.map(token => Header.Raw(ci"Authorization", s"Bearer $token")).toList
   private val baseApiRequest        = Request[F](headers = Headers(authenticationHeaders))
+
+  given f: Facade[Json] = new io.circe.jawn.CirceSupportParser(None, false).facade
 
   private def parseResponse(response: String): Either[ErrorResponse, ChatCompletionResponse] =
     logger.debug(s"Response body - $response")
@@ -60,15 +67,40 @@ class OpenAiClient[F[_]: Monad: Concurrent](apiToken: Option[String], val backen
       decode[ModelListResponse](response).map(_.data).left.map(JsonParsingError(_))
     }
 
-  def chatCompletion(chatRequest: ChatCompletionRequest, toolImplementations: Seq[ToolImplementation[F, ?]] = Nil): F[Either[ErrorResponse, ChatCompletionResponse]] =
-
+  private def httpCompletionRequest(chatRequest: ChatCompletionRequest): Request[F] =
     val jsonBody: String = jsonPrinter.print(chatRequest.asJson)
-
-    val request = baseApiRequest
+    baseApiRequest
       .withMethod(Method.POST)
       .withUri(baseUri / "chat" / "completions")
       .withEntity(jsonBody)
       .withHeaders(Headers(authenticationHeaders) ++ Headers(Header.Raw(ci"Content-Type", "application/json")))
+
+  def chatCompletionStream(chatRequest: ChatCompletionRequest): Stream[F, ChatCompletionChunk] =
+
+    val request = httpCompletionRequest(chatRequest.copy(stream = Some(true)))
+
+    // TODO this is not optimal, but it works for now
+    backend.stream(request)
+      .flatMap(_.body.chunks)
+      .map { chunk => new String(chunk.toArray, StandardCharsets.UTF_8) }
+      .flatMap { chunkBody =>
+        val result = chunkBody.split("\n").flatMap { line =>
+          line.split("data:").last.trim match
+            case "" | "[DONE]" => None
+            case assumedJson =>
+              io.circe.parser.parse(assumedJson).flatMap(_.deepDropNullValues.as[ChatCompletionChunk]) match
+                case Right(chunk) => Some(chunk)
+                case Left(e) =>
+                  logger.error(s"Failed to parse chunk: $assumedJson", e)
+                  throw e
+        }
+
+        Stream.emits(result)
+      }
+
+  def chatCompletion(chatRequest: ChatCompletionRequest, toolImplementations: Seq[ToolImplementation[F, ?]] = Nil): F[Either[ErrorResponse, ChatCompletionResponse]] =
+
+    val request = httpCompletionRequest(chatRequest)
 
     (for {
       responseBody          <- EitherT.right(sendRequest(request))

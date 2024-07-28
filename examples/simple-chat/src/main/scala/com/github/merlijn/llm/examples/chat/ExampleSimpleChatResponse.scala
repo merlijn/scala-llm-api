@@ -16,9 +16,7 @@ object ExampleSimpleChatResponse extends IOApp.Simple:
   val llmModel: String    = requireEnv("DEFAULT_CHAT_MODEL")
   val llmVendorId: String = requireEnv("DEFAULT_CHAT_VENDOR")
 
-  val vendors = ConfigSource.default.at("vendors").load[List[LLMVendor]] match
-    case Left(error)  => throw new IllegalStateException(s"Failed to load config: $error")
-    case Right(value) => value
+  val vendors = ConfigSource.default.at("vendors").loadOrThrow[List[LLMVendor]]
 
   val llmVendor = vendors.find(_.id == llmVendorId).getOrElse(throw new IllegalStateException(s"Vendor $llmVendorId not found"))
 
@@ -33,7 +31,11 @@ object ExampleSimpleChatResponse extends IOApp.Simple:
         )
       )
 
-      openAiClient.chatCompletion(chatRequest).map:
-        case Right(response) => response.firstMessageContent.foreach(logger.info)
-        case Left(error)     => logger.error(error.message)
+      openAiClient
+        .chatCompletionStream(chatRequest)
+        .foreach[IO](response =>
+          IO {
+            response.firstDeltaContent.foreach(logger.info)
+          }
+        ).compile.drain
     }

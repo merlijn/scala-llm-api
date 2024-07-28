@@ -16,3 +16,5 @@ object CirceCodecs:
   given chatCompletionResponseCodec: Decoder[ChatCompletionResponse] = deriveDecoder
   given modelCodec: Codec[Model]                                     = deriveCodec
   given modelListResponseCodec: Decoder[ModelListResponse]           = deriveDecoder
+  given chunkChoiceDecoder: Decoder[ChunkChoice]                     = deriveDecoder
+  given chunkDecoder: Decoder[ChatCompletionChunk]                   = deriveDecoder

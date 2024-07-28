@@ -165,6 +165,7 @@ class ChatBot[F[_]: Async: Parallel](
           chatRequest = dto.ChatCompletionRequest(
             model = chatConfig.model,
             messages = chatHistory :+ dto.Message.user(userMessage),
+            stream = None,
             chatConfig.temperature,
             chatConfig.maxTokens,
             tools = Option.when(tools.nonEmpty)(tools.map(_.spec)),

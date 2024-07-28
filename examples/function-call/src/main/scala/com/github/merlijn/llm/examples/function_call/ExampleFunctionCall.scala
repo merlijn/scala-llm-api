@@ -24,9 +24,7 @@ object ExampleFunctionCall extends IOApp.Simple:
   val llmModel: String    = requireEnv("DEFAULT_CHAT_MODEL")
   val llmVendorId: String = requireEnv("DEFAULT_CHAT_VENDOR")
 
-  val vendors = ConfigSource.default.at("vendors").load[List[LLMVendor]] match
-    case Left(error)  => throw new IllegalStateException(s"Failed to load config: $error")
-    case Right(value) => value
+  val vendors = ConfigSource.default.at("vendors").loadOrThrow[List[LLMVendor]]
 
   val llmVendor = vendors.find(_.id == llmVendorId).getOrElse(throw new IllegalStateException(s"Vendor $llmVendorId not found"))
 

@@ -24,6 +24,7 @@ lazy val api = project
       "org.typelevel" %% "cats-core"   % "2.12.0",
       "org.http4s" %% "http4s-dsl"          % http4sVersion,
       "org.http4s" %% "http4s-client"       % http4sVersion,
+      "org.http4s" %% "http4s-circe"        % http4sVersion,
       "com.github.pureconfig" %% "pureconfig-core" % "0.17.7",
       "co.fs2" %% "fs2-core" % "3.10.2",
     )
@@ -52,6 +53,7 @@ lazy val simpleChat = project
   .settings(commonSettings)
   .settings(
     Compile / run / fork := true,
+    Compile / logBuffered := false,
     Compile / resourceDirectory := sharedResources,
     name := "llm-api-example-simple-chat",
     version := "0.1.0-SNAPSHOT",

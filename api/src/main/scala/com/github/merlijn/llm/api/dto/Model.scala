@@ -6,17 +6,17 @@ import com.github.merlijn.llm.api.schema.{ConcreteSchemaType, JsonSchemaTag, Ref
 import scala.reflect.ClassTag
 
 case class Message(
-  role: String,
+  role: Option[String],
   content: Option[String],
   tool_call_id: Option[String] = None,
   tool_calls: Option[List[ToolCall]] = None
 )
 
 case object Message:
-  def user(content: String): Message                     = Message("user", Some(content))
-  def assistant(content: String): Message                = Message("assistant", Some(content))
-  def system(content: String): Message                   = Message("system", Some(content))
-  def tool(toolCallId: String, content: String): Message = Message("tool", Some(content), tool_call_id = Some(toolCallId))
+  def user(content: String): Message                     = Message(Some("user"), Some(content))
+  def assistant(content: String): Message                = Message(Some("assistant"), Some(content))
+  def system(content: String): Message                   = Message(Some("system"), Some(content))
+  def tool(toolCallId: String, content: String): Message = Message(Some("tool"), Some(content), tool_call_id = Some(toolCallId))
 
 case class Model(
   id: String,
@@ -32,6 +32,7 @@ case class ModelListResponse(
 case class ChatCompletionRequest(
   model: String,
   messages: List[Message],
+  stream: Option[Boolean] = None,
   temperature: Option[Double] = None,
   max_tokens: Option[Int] = None,
   n: Option[Int] = None,
@@ -64,6 +65,21 @@ case class Function(
 
 // --- Response
 
+case class ChatCompletionChunk(
+  id: String,
+  `object`: String,
+  created: Long,
+  model: String,
+  choices: List[ChunkChoice]
+):
+  def firstDeltaContent: Option[String] = choices.headOption.flatMap(_.delta.content)
+
+case class ChunkChoice(
+  index: Int,
+  delta: Message,
+  finish_reason: Option[String] // None in case of streaming
+)
+
 case class ChatCompletionResponse(
   id: String,
   `object`: String,
@@ -78,7 +94,7 @@ case class ChatCompletionResponse(
 case class Choice(
   index: Int,
   message: Message,
-  finish_reason: Option[String] // None in case of streaming
+  finish_reason: Option[String]
 )
 
 case class Usage(
