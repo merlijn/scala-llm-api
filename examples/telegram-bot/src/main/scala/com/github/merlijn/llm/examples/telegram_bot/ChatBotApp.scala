@@ -19,11 +19,11 @@ object ChatBotApp extends IOApp.Simple:
 
   override val run =
 
-    val config = ConfigSource.default.load[ChatBotAppConfig] match
-      case Left(error)  => throw new IllegalStateException(s"Failed to load config: $error")
-      case Right(value) => value
+    def requireEnv(name: String): String =
+      sys.env.getOrElse(name, throw new IllegalStateException(s"Environment variable $name not set"))
 
-    logger.info(s"Loaded config: $config")
+    val config = ConfigSource.default.loadOrThrow[ChatBotAppConfig]
+
     logger.info(s"Number of valid vendors: ${config.validVendors.length}")
 
     val telegramToken = sys.env.getOrElse("TELEGRAM_BOT_TOKEN", throw new IllegalStateException("TELEGRAM_BOT_TOKEN env variable not set"))

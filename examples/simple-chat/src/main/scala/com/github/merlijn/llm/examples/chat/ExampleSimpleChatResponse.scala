@@ -27,13 +27,13 @@ object ExampleSimpleChatResponse extends IOApp.Simple:
         model = llmModel,
         messages = List(
           Message.system("You are a helpful chat bot."),
-          Message.user("Can you tell in short and simple language what an LLM is?")
+          Message.user("Can you tell in short and simple language what an Large Language Model is?")
         )
       )
 
       openAiClient
         .chatCompletionStream(chatRequest)
-        .foreach[IO](response =>
+        .foreach(response =>
           IO {
             response.firstDeltaContent.foreach(logger.info)
           }

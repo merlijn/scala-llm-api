@@ -41,27 +41,26 @@ class OpenAiClient[F[_]: Monad: Concurrent](apiToken: Option[String], val backen
   ): EitherT[F, ErrorResponse, ChatCompletionResponse] =
 
     def performToolCall(toolCall: ToolCall): EitherT[F, ErrorResponse, Message] =
-      for {
+      for
         toolImpl     <- EitherT.fromOption[F](toolImplementations.find(_.name == toolCall.function.name), ToolNotFound(toolCall.function.name))
         toolResponse <- EitherT(toolImpl(toolCall.function.arguments))
-      } yield Message.tool(toolCall.id, toolResponse)
+      yield Message.tool(toolCall.id, toolResponse)
 
     // note: only the first choice is considered
     response.choices.headOption.map(_.message) match
       case Some(msg @ Message(_, _, _, Some(toolCalls))) if toolCalls.nonEmpty =>
-        for {
+        for
           toolMessages <- Traverse[Seq].sequence(toolCalls.map(performToolCall(_)))
           nextRequest = chatRequest.copy(messages = chatRequest.messages ++ List(msg) ++ toolMessages)
           chatCompletion <- EitherT(chatCompletion(nextRequest, toolImplementations))
-        } yield chatCompletion
-      case _ => EitherT.fromEither[F](Right(response))
+        yield chatCompletion
+      case _ => EitherT.rightT(response)
 
   def listModels(): F[Either[ErrorResponse, List[Model]]] =
 
-    val modelsUrl = baseUri / "models"
     val request = baseApiRequest
       .withMethod(Method.GET)
-      .withUri(modelsUrl)
+      .withUri(baseUri / "models")
 
     Monad[F].map(backend.expect[String](request)) { response =>
       decode[ModelListResponse](response).map(_.data).left.map(JsonParsingError(_))
